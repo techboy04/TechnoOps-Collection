@@ -16,6 +16,8 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 - Compass
 - Bo4 Max Ammo
 - Useful Nuke
+- Upgraded Perks
+- Global ATM
 
 ### Lightweight
 - Health Bar
@@ -23,8 +25,10 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 - Changable Perk Limit
 - Spawn Early
 - Hitmarker
+- Secret Music Easter Egg in Survival Maps
 
 ### Tranzit Specific
 - Fast Travel
 - Power opens Pack a Punch and other Power required doors
 - Toggleable fog and denizens
+- Jetgun has unlimited ammo
