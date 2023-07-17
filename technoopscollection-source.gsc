@@ -27,8 +27,14 @@
 
 main()
 {
+	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
 	init_dvars();
 	main_directorscut();
+}
+
+wait_network_frame()
+{
+	wait 0.1;
 }
 
 init()
@@ -673,19 +679,22 @@ spawnPlayerEarly()
 {
 	while(1)
 	{
-		if (self.sessionstate == "spectator" && level.round_number > 5 && self.canrespawn == 0)
+		if (level.exfilstarted != 1)
 		{
-			if (maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total <= 5)
+			if (self.sessionstate == "spectator" && level.round_number > 5 && self.canrespawn == 0)
 			{
-				self iprintln("Get ready to be spawned!");
-				wait 5;
-				self [[ level.spawnplayer ]]();
-				if ( level.script != "zm_tomb" || level.script != "zm_prison" || !is_classic() )
+				if (maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total <= 5)
 				{
-					thread maps\mp\zombies\_zm::refresh_player_navcard_hud();
+					self iprintln("Get ready to be spawned!");
+					wait 5;
+					self [[ level.spawnplayer ]]();
+					if ( level.script != "zm_tomb" || level.script != "zm_prison" || !is_classic() )
+					{
+						thread maps\mp\zombies\_zm::refresh_player_navcard_hud();
+					}
 				}
+			self.canrespawn = 1;
 			}
-		self.canrespawn = 1;
 		}
 		wait 1;
 	}
@@ -3089,6 +3098,7 @@ spawnExfil()
 						{
 							player thread showvoting(i);
 							player thread checkVotingInput();
+							player.canrespawn = 0;
 						}
 						level waittill_any ("voting_finished","voting_expired");
 					}
@@ -4958,7 +4968,7 @@ spawnTeddyBear(x,y,z,angle)
 			i.teddybears += 1;
 			i playsound( "zmb_meteor_activate" );
 			
-			if (level.teddybears == 3) 
+			if (i.teddybears == 3) 
 			{
 				i playsound("mus_zmb_secret_song");
 			}
@@ -5170,7 +5180,7 @@ checkTransit()
 {
 	if( getDvar( "g_gametype" ) == "zclassic" && level.scr_zm_map_start_location == "transit" )
 	{
-		createTriggers();
+		level thread createTriggers();
 		level.activatefasttravel = 0;
 	}
 }
@@ -5256,6 +5266,11 @@ createTriggers()
 		level waittill ("power_on");
 		level notify ("fasttravel_on");
 		level.activatefasttravel = 1;
+		
+		foreach (player in players)
+		{
+			player iprintln("Power on");
+		}
 	}
 	else
 	{
@@ -6967,7 +6982,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.15");
+	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.16");
 }
 
 modslist_text()
@@ -7134,3 +7149,5 @@ help_text()
 	wait 1;
 	self iPrintLn("^2.credits ^7- ^5View the credits of the mod");
 }
+
+
