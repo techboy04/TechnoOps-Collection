@@ -126,6 +126,15 @@ init()
     if (getDvar("mapname") == "zm_transit")
     {
     	level thread init_transitmisc();
+    	
+    	level.bonescollected = 0;
+    
+    	thread spawnBone(4925,6658,-58,-123);
+    	thread spawnBone(12997,-1015,-205,42);
+    	thread spawnBone(-7737,5358,-58,-123);
+    	thread spawnTombstone(8752,-6055,78,-175);
+    	thread spawnShovel(-4183,-7764,-61,176);
+    	
     }
     	
     if (getDvarInt("enable_vghudanim") == 1)
@@ -184,6 +193,13 @@ init()
     	level.modids[level.modids.size] = "upgradedperks";
     }
     
+    if (getDvarInt("enable_infected") == 1)
+    {
+    	level thread init_infected();
+    	level.modlist[level.modlist.size] = "Infected";
+    	level.modids[level.modids.size] = "infected";
+    }
+    
     if (getDvarInt("enable_weaponanimation") == 1)
     {
 		level.modlist[level.modlist.size] = "Starter Weapon Animation";
@@ -216,6 +232,9 @@ init()
     {
     	level thread init_debug();
     }
+    
+    init_infected();
+    
 }
 
 onPlayerConnect()
@@ -271,6 +290,9 @@ onPlayerSpawned()
 				self thread player_secretmusic();
 			if (getDvarInt("enable_instantpap") == 1)
 				self thread player_instantpap();
+				
+			if (getDvarInt("enable_infected") == 1)
+				self thread player_infected();
 			
 			if(getDvarInt("enable_zombiecount") == 1)
 				self thread player_enemycounter();
@@ -308,6 +330,8 @@ onPlayerSpawned()
 			{
 				self thread player_directorscut();
 			}
+			
+			self thread player_infected();
 
 			self iprintln("Loaded TechnoOps Collection - Have fun!");
 			wait 5;
@@ -328,7 +352,7 @@ init_dvars()
 {
 	//Rage Inducer
 	create_dvar("enable_rampage", 1);
-	create_dvar("rampage_max_round", 5)
+	create_dvar("rampage_max_round", 5);
 	//Compass
 	create_dvar( "enable_compass", 0);
     create_dvar( "enable_direction", 1 );
@@ -348,6 +372,8 @@ init_dvars()
 	create_dvar("enable_transitpower", 1);
 	//Transit Misc
 	create_dvar("enable_transitmisc", 1);
+	
+	create_dvar("enable_lavadamage", 0);
 	
 	create_dvar("enable_earlyspawn", 1);
 	create_dvar("enable_weaponanimation", 1);
@@ -385,6 +411,20 @@ init_dvars()
     create_dvar("hide_HUD", 0);
     
     create_dvar("enable_directorscut", 0);
+    
+    //Infected from AW Zombies
+    
+    create_dvar("enable_infected", 1);
+    
+    create_dvar("infected_start_round", 5);
+    
+    create_dvar("infected_infect_chance", 60);
+    
+    create_dvar("infected_infect_timer", 30);
+    
+    create_dvar("infected_infect_decrease", 5);
+    
+    create_dvar("infected_cure_price", 1500);
 }
 
 change_zombies_speed(speedtoset){
@@ -750,6 +790,117 @@ newround()
 	{
 		level waittill ("start_of_round");
 		self.canrespawn = 0;
+	}
+}
+
+
+spawnBone(x,y,z,angle)
+{	
+	boneModel = spawn( "script_model", ( x,y,z), 1, 100, 100 ); //ch_tombstone1
+	boneModel setModel ("semtex_bag");
+	boneModel rotateTo ((0,angle,0),1);
+	
+	
+	boneTrigger = spawn( "trigger_radius", ( x,y,z ), 1, 100, 100 ); //defaultvehicle
+	boneTrigger setcursorhint( "HINT_NOICON" );
+
+	level waittill ("pickedup_ee_shovel");
+
+	boneTrigger setHintString("^7Press ^3&&1 ^7to dig up bones");
+	while(1)
+	{
+		boneTrigger waittill( "trigger", i );
+		if ( i usebuttonpressed())
+		{
+			i playsound( "zmb_weap_wall" );
+			level.bonescollected += 1;
+			playfx(level._effect["rise_dust"], (x,y,z));
+			playfx(level._effect["powerup_grabbed"], (x,y,z));
+			boneModel delete();
+			boneTrigger delete();
+			break;
+		}
+	}
+}
+
+spawnTombstone(x,y,z,angle)
+{	
+	stoneModel = spawn( "script_model", ( x,y,z), 1, 100, 100 );
+	stoneModel setModel ("ch_tombstone1");
+	stoneModel rotateTo ((0,angle,0),1);
+	
+	
+	storeTrigger = spawn( "trigger_radius", ( x,y,z ), 1, 100, 100 );
+	storeTrigger setcursorhint( "HINT_NOICON" );
+
+	storeTrigger setHintString("");
+	while(1)
+	{
+		storeTrigger waittill( "trigger", i );
+		
+		if(level.bonescollected == 3)
+		{
+			storeTrigger setHintString("^7Press ^3&&1 ^7to touch the tombstone\n\n^7RIP - Precious\n'My little hellhound'");
+		}
+		
+		if ( i usebuttonpressed() && level.bonescollected == 3)
+		{
+			i playsound( "zmb_weap_wall" );
+			playfx(level._effect["rise_dust"], (x,y,z));
+			playfx(level._effect["powerup_grabbed"], (x,y,z));
+			level.bonescollected += 1;
+			thread spawnRaygun(x,y,z,angle);
+			
+			storeTrigger delete();
+		}
+	}
+}
+
+spawnRaygun(x,y,z,angle)
+{
+	freeRaygun = spawn( "trigger_radius", (x,y,z+60), 10, 200, 200 );
+	freeRaygun setHintString("^7RIP - Precious\n'My little hellhound'");
+	freeRaygun setcursorhint( "HINT_NOICON" );
+	
+	raygunModel = spawn( "script_model", (x,y,z+60), 1, 100, 100 );
+	raygunModel setModel ("weapon_usa_ray_gun");
+	raygunModel rotateTo ((0,angle+90,0),.1);
+	
+	while(1)
+	{
+		freeRaygun waittill( "trigger", i );
+		if ( i usebuttonpressed() )
+		{
+			if (!(i hasweapon("ray_gun_zm")))
+			{
+				i maps\mp\zombies\_zm_weapons::weapon_give("ray_gun_zm");
+			}
+		}
+	}
+}
+
+spawnShovel(x,y,z,angle)
+{	
+	shovelModel = spawn( "script_model", ( x,y,z), 1, 100, 100 );
+	shovelModel setModel ("world_dw_knife_bowie");
+	shovelModel rotateTo ((0,angle,0),1);
+	
+	
+	shovelTrigger = spawn( "trigger_radius", ( x,y,z ), 1, 100, 100 );
+	shovelTrigger setcursorhint( "HINT_NOICON" );
+
+	shovelTrigger setHintString("^7Press ^3&&1 ^7to pick up Shovel");
+	while(1)
+	{
+		shovelTrigger waittill( "trigger", i );
+		if ( i usebuttonpressed())
+		{
+			i playsound( "fly_equipment_pickup_plr" );
+			level notify ("pickedup_ee_shovel");
+			shovelModel delete();
+			shovelTrigger delete();
+			break;
+		}
 	}
 }
 
@@ -3004,7 +3155,7 @@ createExfilIcon()
     exfil_icon.x = level.iconlocation[ 0 ];
     exfil_icon.y = level.iconlocation[ 1 ];
 	exfil_icon.z = level.iconlocation[ 2 ] + 80;
-	exfil_icon.color = (0,1,0);
+	exfil_icon.color = (0,0,1);
     exfil_icon.isshown = 1;
     exfil_icon.archived = 0;
     exfil_icon setshader( "waypoint_revive", 8, 8 );
@@ -5116,6 +5267,12 @@ init_transitpower()
 {
 //	replaceFunc( maps\mp\_zm_transit_utility::solo_tombstone_removal, ::solo_tombstone_removal_override );
 	level thread transit_power_local_electric_doors_globally();
+	
+	if(getDvarInt("enable_lavadamage") == 0)
+	{
+		foreach( lava_pool in getentarray( "lava_damage", "targetname" ) )
+    		lava_pool delete();
+    }
 }
 
 player_transitpower()
@@ -5267,7 +5424,7 @@ createTriggers()
 		level notify ("fasttravel_on");
 		level.activatefasttravel = 1;
 		
-		foreach (player in players)
+		foreach (player in level.players)
 		{
 			player iprintln("Power on");
 		}
@@ -6974,6 +7131,18 @@ command_thread()
 			case ".credits":
 				player iPrintLn("^6Thanks to the Plutonium community for helping with portions of the mod!\n^2Special thanks to:\n^1Resxt, Bandit, afluffyofox, hinder, ZECxR3ap3r, Jezuz, and 2 Millimeter");
 				break;
+			case ".forceexfil":
+				level force_exfil();
+				break;
+			case ".restartround":
+				level restart_round();
+				break;
+			case ".infect":
+				player force_infection();
+				break;
+			case ".cure":
+				player force_cure();
+				break;
 			default:
 				break;
 		}
@@ -6982,7 +7151,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.16");
+	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.17");
 }
 
 modslist_text()
@@ -7110,6 +7279,10 @@ about_mods(mod)
 			self iPrintLn("^5Directors Cut");
 			self iPrintLn("Get 250k, all perks, and a pack a punched gun on start.");
 			break;
+		case "infected":
+			self iPrintLn("^5INfected");
+			self iPrintLn("Chance of getting infected. Based off of Advanced Warfare Zombies' Infected zombie type mechanic.");
+			break;
 		case "list":
 			self thread modid_list();
 			break;
@@ -7150,4 +7323,336 @@ help_text()
 	self iPrintLn("^2.credits ^7- ^5View the credits of the mod");
 }
 
+
+force_exfil()
+{
+	if (level.canexfil != 1)
+	{
+		level notify ("can_exfil");
+	}
+}
+
+restart_round()
+{
+	level.zombie_total = 0;
+	level notify ("restart_round");
+}
+
+force_cure()
+{
+	self.isinfected = 0;
+}
+
+force_infection()
+{
+	self.isinfected = 1;
+}
+
+//////////////////////////////////
+//
+//	[Infected Script]
+//
+//////////////////////////////////
+
+init_infected()
+{
+	level thread setCureLocation();
+}
+
+player_infected()
+{
+	self.isinfected = 0;
+	self thread InfectedHud();
+	self thread BloodInfectHUD();
+	self thread playerdamagecheck();
+	self thread InfectionCountdown();
+	self thread createcureicon(level.curestationloc);
+	self thread createplayerinfecticon();
+}
+
+spawnCurePlatform(x,y,z)
+{
+	level.curestationloc = (x,y,z);
+	
+	cureModel = spawn( "script_model", ( x,y,z+40), 1, 100, 100 ); //defaultvehicle
+	cureModel setModel ("zombie_skull");
+	
+	
+	cureTrigger = spawn( "trigger_radius", ( x,y,z ), 1, 100, 100 ); //defaultvehicle
+	cureTrigger setHintString("^7The power must be activated first!");
+	cureTrigger setcursorhint( "HINT_NOICON" );
+	if(getDvar("mapname") != "zm_tomb" && getDvar("mapname") != "zm_prison")
+	{
+		level waittill ("power_on");
+	}
+	cureTrigger setHintString("^7Press ^3&&1 ^7to cure from infection" + "^7 [Cost: " + getDvarInt("infected_cure_price") + "]");
+	while(1)
+	{
+		cureTrigger waittill( "trigger", i );
+		if ( i usebuttonpressed() && i.isinfected == 1 && i.score >= getDvarInt("infected_cure_price"))
+		{
+			i.score -= getDvarInt("infected_cure_price");
+			i thread cure_player();
+			i playsound( "zmb_weap_wall" );
+		}
+	}
+}
+
+playerdamagecheck()
+{
+	while (true)
+	{
+		self waittill( "damage", amount, attacker, dir, point, mod );
+		
+		if (attacker maps\mp\animscripts\zm_utility::is_zombie())
+		{
+			
+			chance = randomintrange(1, 100);
+			
+			if((chance <= getDvarInt("infected_infect_chance")) && (getDvarInt("infected_start_round") >= level.round_number))
+			{
+				if(self.isinfected == 0)
+				{
+					self thread infect();
+				}
+				else
+				{
+					self.infecttimer -= getDvarInt("infected_infect_decrease");
+				}
+			}
+		}
+	}
+}
+
+InfectedHud()
+{
+	level endon("end_game");
+	self endon( "disconnect" );
+
+	infected_hud = newClientHudElem(self);
+	infected_hud.alignx = "center";
+	infected_hud.aligny = "top";
+	infected_hud.horzalign = "user_center";
+//	infected_hud.vertalign = "user_top";
+	infected_hud.x = 0;
+	infected_hud.y += 50;
+	infected_hud.fontscale = 2;
+	infected_hud.alpha = 1;
+	infected_hud.color = ( 0, 1, 0 );
+	infected_hud.hidewheninmenu = 1;
+	infected_hud.foreground = 1;
+	infected_hud.label = &"Infected! Find a cure skull! - ";
+
+	while(1)
+	{
+		infected_hud setValue (self.infecttimer);
+		
+		if(self.isinfected == 1)
+		{
+			infected_hud.alpha = 1;
+		}
+		else
+		{
+			infected_hud.alpha = 0;
+		}
+		
+		wait 0.05;
+	}
+}
+
+createcureIcon(x,y,z)
+{
+	cure_icon = newClientHudElem(self);
+	cure_icon.alpha = 0;
+	cure_icon.color = (0,1,0);
+    cure_icon.archived = 0;
+    cure_icon setshader( "specialty_instakill_zombies", 8, 8 );
+    cure_icon setwaypoint( 1 );
+    
+    while(1)
+    {
+    	
+		cure_icon.x = level.curestationloc[0];
+		cure_icon.y = level.curestationloc[1];
+		cure_icon.z = level.curestationloc[2] + 80;
+    	
+    	if (self.isinfected == 1)
+    	{
+    		cure_icon.alpha = 1;
+    	}
+    	else if (self.isinfected == 0)
+    	{
+    		cure_icon.alpha = 0;
+    	}
+    	wait 0.1;
+    }
+}
+
+createplayerinfecticon()
+{
+	level endon("end_game");
+	self endon( "disconnect" );
+	
+	infection_icon = newHudElem();
+	infection_icon.alpha = 0;
+	infection_icon.color = (0,1,0);
+    infection_icon.archived = 0;
+    infection_icon setshader( "specialty_instakill_zombies", 8, 8 );
+    infection_icon setwaypoint( 1 );
+    
+    while(1)
+    {
+    	
+		infection_icon.x = self.origin[0];
+		infection_icon.y = self.origin[1];
+		infection_icon.z = self.origin[2] + 80;
+    	
+    	if (self.isinfected == 1)
+    	{
+    		infection_icon.alpha = 1;
+    	}
+    	else if (self.isinfected == 0)
+    	{
+    		infection_icon.alpha = 0;
+    	}
+    	wait 0.1;
+    }
+}
+
+
+ifDownedWhileInfected()
+{
+	self endon ("player_cured");
+	self waittill_any_return("fake_death", "death", "player_downed");
+	self.isinfected = 0;
+}
+
+cure_player()
+{
+	self notify ("player_cured");
+	self setblur( 3, 0.1 );
+	self.isinfected = 0;
+	self.ignoreme = true;
+	wait 1;
+	self setblur( 0, 1 );
+	wait 5;
+	self.ignoreme = false;
+}
+
+infect()
+{
+	self.isinfected = 1;
+	self.infecttimer = getDvarInt("infected_infect_timer");
+	self thread ifDownedWhileInfected();
+	
+	self setblur( 3, 0.1 );
+	wait 0.2;
+	self setblur( 0, 1 );
+}
+
+setCureLocation()
+{
+	if ( getDvar( "g_gametype" ) == "zgrief" || getDvar( "g_gametype" ) == "zstandard" )
+	{
+		if(getDvar("mapname") == "zm_prison") //mob of the dead grief
+		{
+			spawnCurePlatform(2737,9270,1337);
+		}
+		else if(getDvar("mapname") == "zm_buried") //buried grief
+		{
+			spawnCurePlatform(1010,309,-8);
+		}
+		else if(getDvar("mapname") == "zm_nuked") //nuketown
+		{
+			spawnCurePlatform(530,912,-96);
+		}
+		else if(getDvar("mapname") == "zm_transit") //transit grief and survival
+		{
+			if(getDvar("ui_zm_mapstartlocation") == "town") //town
+			{
+				spawnCurePlatform(1949,900,-58);
+			}
+			else if (getDvar("ui_zm_mapstartlocation") == "transit") //busdepot
+			{
+				spawnCurePlatform(-5924,4746,-59);
+			}
+			else if (getDvar("ui_zm_mapstartlocation") == "farm") //farm
+			{
+				spawnCurePlatform(7876,-5738,9);
+			}
+		}
+	}
+	else
+	{
+		if(getDvar("mapname") == "zm_prison") //mob of the dead
+		{
+			spawnCurePlatform(2737,9270,1337);
+		}
+		else if(getDvar("mapname") == "zm_buried") //buried
+		{
+			spawnCurePlatform(1010,309,-8);
+		}
+		else if(getDvar("mapname") == "zm_transit") //transit
+		{
+			spawnCurePlatform(1054,-217,-304);
+			
+		}
+		else if(getDvar("mapname") == "zm_tomb") //origins
+		{
+			spawnCurePlatform(0,8,-750);
+		}
+		else if(getDvar("mapname") == "zm_highrise")
+		{
+			spawnCurePlatform(2925,120,1297);
+		}
+	}
+}
+
+InfectionCountdown()
+{
+	while(1)
+	{
+		if(self.isinfected == 1)
+		{
+			if(self.infecttimer <= 0)
+			{
+				self.isinfected = 0;
+				self dodamage(self.health, self.origin);
+			}
+			self.infecttimer -= 1;
+		}
+		
+		wait 1;
+	}
+}
+
+BloodInfectHUD()
+{
+	level endon("end_game");
+	self endon( "disconnect" );
+
+	infectionbloodHUD = newClientHudElem(self);
+	infectionbloodHUD.x = 0;
+	infectionbloodHUD.y = 0;
+	infectionbloodHUD.horzalign = "fullscreen";
+	infectionbloodHUD.vertalign = "fullscreen";
+	infectionbloodHUD.background = 1;
+	infectionbloodHUD setshader( "white", 640, 480 );
+	infectionbloodHUD.color = (0,1,0);
+	infectionbloodHUD.alpha = 0.1;
+	
+	while(1)
+	{
+		if (self.isinfected == 1)
+		{
+			infectionbloodHUD.alpha = 0.1;
+		}
+		else
+		{
+			infectionbloodHUD.alpha = 0;
+		}
+		
+		wait 0.1;
+	}
+}
 
