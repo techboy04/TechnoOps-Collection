@@ -5268,7 +5268,7 @@ init_transitpower()
 //	replaceFunc( maps\mp\_zm_transit_utility::solo_tombstone_removal, ::solo_tombstone_removal_override );
 	level thread transit_power_local_electric_doors_globally();
 	
-	if(getDvarInt("enable_lavadamage") == 0)
+	if(getDvarInt("enable_lavadamage") == 1)
 	{
 		foreach( lava_pool in getentarray( "lava_damage", "targetname" ) )
     		lava_pool delete();
