@@ -4356,7 +4356,7 @@ player_instantpap()
 instapap(player){
 	current_weapon = player getcurrentweapon();
 	current_weapon = player maps\mp\zombies\_zm_weapons::switch_from_alt_weapon( current_weapon );
-	if ( player maps\mp\zombies\_zm_magicbox::can_buy_weapon() && !player maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !is_true( player.intermission ) || player isthrowinggrenade() && !player maps\mp\zombies\_zm_weapons::can_upgrade_weapon( current_weapon ) )
+	if ( !player maps\mp\zombies\_zm_magicbox::can_buy_weapon() && !player maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !is_true( player.intermission ) || player isthrowinggrenade() && !player maps\mp\zombies\_zm_weapons::can_upgrade_weapon( current_weapon ) )
 	{
 		wait 0.1;
 		return 0;
@@ -5268,7 +5268,7 @@ init_transitpower()
 //	replaceFunc( maps\mp\_zm_transit_utility::solo_tombstone_removal, ::solo_tombstone_removal_override );
 	level thread transit_power_local_electric_doors_globally();
 	
-	if(getDvarInt("enable_lavadamage") == 1)
+	if(getDvarInt("enable_lavadamage") == 0)
 	{
 		foreach( lava_pool in getentarray( "lava_damage", "targetname" ) )
     		lava_pool delete();
