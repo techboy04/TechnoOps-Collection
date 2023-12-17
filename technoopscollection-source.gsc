@@ -1,4 +1,421 @@
-yerEarly();
+#include maps\mp\_utility;
+#include maps\_utility;
+#include maps\_effects;
+#include common_scripts\utility;
+#include maps\mp\gametypes_zm\_hud_util;
+#include maps\mp\gametypes_zm\_hud_message;
+#include maps\mp\zombies\_zm_utility;
+#include maps\mp\zombies\_zm_zonemgr;
+#include maps\mp\zombies\_zm_perks;
+#include maps\mp\zm_transit_bus;
+#include maps\mp\zm_transit_utility;
+#include maps\mp\zombies\_zm_power;
+#include maps\mp\zombies\_zm_weapons;
+#include maps\mp\zombies\_zm_magicbox;
+#include maps\mp\zombies\_zm_laststand;
+#include maps\mp\zombies\_zm_pers_upgrades_functions;
+#include maps\mp\zombies\_zm_audio;
+#include maps\mp\_demo;
+#include maps\mp\zombies\_zm_stats;
+#include maps\mp\zombies\_zm_score;
+#include maps\mp\zombies\_zm_chugabud;
+#include maps\mp\_visionset_mgr;
+#include maps\mp\zombies\_zm;
+#include maps\mp\zombies\_zm_spawner;
+#include maps\mp\zombies\_zm_audio_announcer;
+
+
+main()
+{
+	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
+	init_dvars();
+	main_directorscut();
+}
+
+wait_network_frame()
+{
+	wait 0.1;
+}
+
+init()
+{
+    level thread onPlayerConnect();
+    level thread betaMessage();
+    level thread command_thread();
+    level thread updateSomeSettings();
+	precacheshader("riotshield_zm_icon");
+	precacheshader("zm_riotshield_tomb_icon");
+	precacheshader("zm_riotshield_hellcatraz_icon");
+	precacheshader("menu_mp_fileshare_custom");
+
+//    level thread featuresList();
+    
+    level.modlist = [];
+    level.modids = [];
+    
+    if (getDvarInt("enable_rampage") == 1)
+    {
+    	level thread init_rageinducer();
+    	level.modlist[level.modlist.size] = "Rampage Statue";
+    	level.modids[level.modids.size] = "rampage";
+    }
+    
+    if (getDvarInt("enable_origins_mud") == 1)
+    {
+    	level.a_e_slow_areas = 1;
+    }
+    else
+    {
+    	level.a_e_slow_areas = 0;
+    }
+    
+    if ((getDvarInt("enable_compass") == 1) || (getDvarInt("max_clients") > 4))
+    {
+    	level thread init_compass();
+    	level.modlist[level.modlist.size] = "Compass";
+    	level.modids[level.modids.size] = "compass";
+    }
+    	
+    if ((getDvarInt("enable_notifier") == 1) || (getDvarInt("max_clients") > 4))
+    {
+    	level thread init_zonenotifer();
+    	level.modlist[level.modlist.size] = "Zone Notifier";
+    	level.modids[level.modids.size] = "zonenotifier";
+    }
+    	
+    if (getDvarInt("enable_bonuspoints") == 1)
+    	level thread init_bonuspoints();
+    	level.modlist[level.modlist.size] = "Bonus Points";
+    	level.modids[level.modids.size] = "bonuspoints";
+    	
+    if (getDvarInt("enable_usefulnuke") == 1)
+    {
+    	level thread init_usefulnuke();
+    	level.modlist[level.modlist.size] = "Useful Nuke";
+    	level.modids[level.modids.size] = "usefulnuke";
+    }
+    	
+    if (getDvarInt("enable_bo4ammo") == 1)
+    {
+    	level thread init_bo4ammo();
+    	level.modlist[level.modlist.size] = "Bo4 Ammo";
+    	level.modids[level.modids.size] = "bo4ammo";
+    }
+    	
+    if (getDvarInt("enable_transitpower") == 1)
+    {
+    	level thread init_transitpower();
+    	level.modlist[level.modlist.size] = "Transit Better Power";
+    	level.modids[level.modids.size] = "transitpower";
+    }
+    	
+    if (getDvarInt("enable_exfil") == 1)
+    {
+    	level thread init_exfil();
+    	level.modlist[level.modlist.size] = "Exfil";
+    	level.modids[level.modids.size] = "exfil";
+    }
+    	
+    if (getDvarInt("enable_fasttravel") == 1)
+    {
+    	level thread init_fasttravel();
+    	level.modlist[level.modlist.size] = "Fast Travel";
+    	level.modids[level.modids.size] = "fasttravel";
+    }
+
+    if (getDvar("mapname") == "zm_transit")
+    {
+    	level thread init_transitmisc();
+    	
+    	level.bonescollected = 0;
+    
+    	thread spawnBone(4925,6658,-58,-123);
+    	thread spawnBone(12997,-1015,-205,42);
+    	thread spawnBone(-7737,5358,-58,-123);
+    	thread spawnTombstone(8752,-6055,78,-175);
+    	thread spawnShovel(-4183,-7764,-61,176);
+    	
+    }
+    	
+    if (getDvarInt("enable_vghudanim") == 1)
+    {
+    	level thread init_vghudanim();
+    	level.modlist[level.modlist.size] = "Vanguard Perk Animation";
+    	level.modids[level.modids.size] = "vghudanim";
+    }
+    
+    if (getDvarInt("enable_secretmusicsurvival") == 1)
+    {
+    	level thread init_secretmusic();
+    	level.modlist[level.modlist.size] = "Secret Music EE in Survival";
+    	level.modids[level.modids.size] = "secretmusic";
+    }
+    	
+    if (getDvarInt("enable_instantpap") == 1)
+    {
+    	level thread init_instantpap();
+    	level.modlist[level.modlist.size] = "Instant PAP";
+    	level.modids[level.modids.size] = "instantpap";
+    }
+
+	if (getDvarInt("enable_globalatm") == 1)
+    {
+    	level thread init_globalatm();
+    	level.modlist[level.modlist.size] = "Global ATM";
+    	level.modids[level.modids.size] = "globalatm";
+    }
+
+    if(getDvarInt("enable_zombiecount") == 1)
+    {
+    	level thread init_enemycounter();
+    	level.modlist[level.modlist.size] = "Enemy Counter";
+    	level.modids[level.modids.size] = "enemycounter";
+    }
+    	
+    if (getDvarInt("enable_healthbar") == 1)
+    {
+    	level thread init_health();
+    	level.modlist[level.modlist.size] = "Health and Shield Bar";
+    	level.modids[level.modids.size] = "healthbar";
+    }
+    	
+    if (getDvarInt("enable_hitmarker") == 1)
+    {
+    	level thread init_hitmarker();
+    	level.modlist[level.modlist.size] = "Hitmarker";
+    	level.modids[level.modids.size] = "hitmarker";
+    }
+    	
+    if (getDvarInt("enable_upgradedperks") == 1)
+    {
+    	level thread init_upgradedperks();
+    	level.modlist[level.modlist.size] = "Upgraded Perks";
+    	level.modids[level.modids.size] = "upgradedperks";
+    }
+    
+    if (getDvarInt("enable_infected") == 1)
+    {
+    	level thread init_infected();
+    	level.modlist[level.modlist.size] = "Infected";
+    	level.modids[level.modids.size] = "infected";
+    }
+    
+    if (getDvarInt("enable_weaponanimation") == 1)
+    {
+		level.modlist[level.modlist.size] = "Starter Weapon Animation";
+		level.modids[level.modids.size] = "starter";
+	}
+		
+	if (getDvarInt("enable_earlyspawn") == 1)
+	{
+		level.modlist[level.modlist.size] = "Spawn Early Rounds";
+		level.modids[level.modids.size] = "earlyspawn";
+	}
+	
+	if(getDvarInt("enable_directorscut") == 1)
+	{
+		level thread init_directorscut();
+		level.modlist[level.modlist.size] = "Directors Cut";
+		level.modids[level.modids.size] = "directorscut";
+	}
+    	
+    if (getDvarInt("perk_limit") > 9)
+    {
+    	level.perk_purchase_limit = 9;
+    }
+    else
+    {
+    	level.perk_purchase_limit = getDvarInt("perk_limit");
+    }
+    
+    if (getDvarInt("enable_debug") == 1)
+    {
+    	level thread init_debug();
+    }
+    
+    init_infected();
+    
+}
+
+onPlayerConnect()
+{
+    for(;;)
+    {
+        level waittill("connected", player);
+        player thread onPlayerSpawned();
+    }
+}
+
+onPlayerSpawned()
+{
+    self endon("disconnect");
+	level endon("game_ended");
+	
+	init_player_things();
+
+    for(;;)
+    {
+        self waittill("spawned_player");
+        self endon("disconnect");
+        
+        giveStarterWeapons();
+    }
+}
+
+create_dvar( dvar, set )
+{
+    if( getDvar( dvar ) == "" )
+		setDvar( dvar, set );
+}
+
+init_dvars()
+{
+	//Rage Inducer
+	create_dvar("enable_rampage", 1);
+	create_dvar("rampage_max_round", 5);
+	//Compass
+	create_dvar( "enable_compass", 0);
+    create_dvar( "enable_direction", 1 );
+    create_dvar( "enable_zone", 1 );
+    create_dvar( "enable_angle", 1 );
+	//Zone Notifier
+	create_dvar("enable_notifier", 1);
+	//Bonus Points
+	create_dvar("enable_bonuspoints", 1);
+	create_dvar("bonuspoints_points", 100);
+	//Useful Nuke
+	create_dvar("enable_usefulnuke", 1);
+	create_dvar("usefulnuke_points", 60);
+	//Bo4 Ammo
+	create_dvar("enable_bo4ammo", 1);
+	//Tramsit Power
+	create_dvar("enable_transitpower", 1);
+	//Transit Misc
+	create_dvar("enable_transitmisc", 1);
+	
+	create_dvar("enable_lavadamage", 0);
+	
+	create_dvar("enable_earlyspawn", 1);
+	create_dvar("enable_weaponanimation", 1);
+	create_dvar("perk_limit", 10);
+	
+	//Fast Travel Tranzit
+	create_dvar("enable_fasttravel", 1);
+	create_dvar("fasttravel_price", 1500);
+    create_dvar("fasttravel_activateonpower", 0);
+    
+    create_dvar("enable_healthbar", 1);
+    
+    create_dvar("enable_zombiecount", 1);
+    
+    create_dvar("enable_exfil", 1);
+    
+    create_dvar("enable_debug", 0);
+    
+    create_dvar("enable_instantpap", 1);
+    
+    create_dvar("enable_vghudanim", 1);
+    
+    create_dvar("enable_secretmusicsurvival", 1);
+
+    create_dvar("enable_hitmarker", 1);
+
+    create_dvar("enable_upgradedperks", 1);
+    
+    create_dvar("enable_globalatm", 1);
+    
+    create_dvar("enable_origins_mud", 1);
+    
+    create_dvar("cinematic_mode", 0);
+    
+    create_dvar("hide_HUD", 0);
+    
+    create_dvar("enable_directorscut", 0);
+    
+    //Infected from AW Zombies
+    
+    create_dvar("enable_infected", 1);
+    
+    create_dvar("infected_start_round", 5);
+    
+    create_dvar("infected_infect_chance", 60);
+    
+    create_dvar("infected_infect_timer", 30);
+    
+    create_dvar("infected_infect_decrease", 5);
+    
+    create_dvar("infected_cure_price", 1500);
+}
+
+init_player_things()
+{
+	if(self.firstsetup == 0)
+	{
+		self.firstsetup = 1;
+		self thread newround();
+		if (getDvarInt("enable_rampage") == 1)
+			self thread player_rageinducer();
+		if ((getDvarInt("enable_compass") == 1) || (getDvarInt("max_clients") > 4))
+			self thread player_compass();
+		if ((getDvarInt("enable_notifier") == 1) || (getDvarInt("max_clients") > 4))
+			self thread player_zonenotifer();
+		if (getDvarInt("enable_bonuspoints") == 1)
+			self thread player_bonuspoints();
+		if (getDvarInt("enable_usefulnuke") == 1)
+			self thread player_usefulnuke();
+		if (getDvarInt("enable_bo4ammo") == 1)
+			self thread player_bo4ammo();
+		if (getDvarInt("enable_transitpower") == 1)
+			self thread player_transitpower();
+		
+		self thread player_transitmisc();
+
+		if (getDvarInt("enable_exfil") == 1)
+			self thread player_exfil();
+		if (getDvarInt("enable_healthbar") == 1)
+			self thread player_health();
+		if (getDvarInt("enable_fasttravel") == 1)
+			self thread player_fasttravel();
+		if (getDvarInt("enable_vghudanim") == 1)
+			self thread player_vghudanim();
+		if (getDvarInt("enable_secretmusicsurvival") == 1)
+			self thread player_secretmusic();
+		if (getDvarInt("enable_instantpap") == 1)
+			self thread player_instantpap();
+				
+		if (getDvarInt("enable_infected") == 1)
+			self thread player_infected();
+			
+		if(getDvarInt("enable_zombiecount") == 1)
+			self thread player_enemycounter();
+		
+		
+		if (getDvarInt("enable_debug") == 1)
+    		self thread player_debug();
+    	
+    	self thread toggle_hud();
+
+    	if (getDvarInt("enable_hitmarker") == 1)
+    		self thread player_hitmarker();
+    	
+   		if (getDvarInt("enable_upgradedperks") == 1)
+    		self thread player_upgradedperks();
+    	
+    	if (getDvarInt("enable_globalatm") == 1)
+    		self thread player_globalatm();
+    	
+    	if (getDvarInt("enable_weaponanimation") == 1)
+    	{
+    		if (getDvar("mapname") != "zm_prison")
+			{
+				self thread weaponanimation();
+			}
+		}
+		
+		if (getDvarInt("enable_earlyspawn") == 1)
+		{
+			self thread spawnIfRoundOne();
+			self thread spawnPlayerEarly();
 		}
 
 		if(getDvarInt("enable_directorscut") == 1)
@@ -7243,3 +7660,7 @@ BloodInfectHUD()
 		wait 0.1;
 	}
 }
+
+
+
+
