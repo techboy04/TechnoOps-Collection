@@ -28,6 +28,7 @@
 main()
 {
 	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
+	replacefunc(maps\mp\zombies\_zm::round_think, ::new_round_think);
 	init_dvars();
 	main_directorscut();
 }
@@ -233,8 +234,6 @@ init()
     	level thread init_debug();
     }
     
-    init_infected();
-    
 }
 
 onPlayerConnect()
@@ -270,9 +269,11 @@ create_dvar( dvar, set )
 
 init_dvars()
 {
+	create_dvar("enable_custom_subtitles", 1);
+	
 	//Rage Inducer
 	create_dvar("enable_rampage", 1);
-	create_dvar("rampage_max_round", 5);
+	create_dvar("rampage_max_round", 20);
 	//Compass
 	create_dvar( "enable_compass", 0);
     create_dvar( "enable_direction", 1 );
@@ -336,7 +337,7 @@ init_dvars()
     
     create_dvar("enable_infected", 1);
     
-    create_dvar("infected_start_round", 5);
+    create_dvar("infected_start_round", 15);
     
     create_dvar("infected_infect_chance", 60);
     
@@ -822,6 +823,7 @@ spawnBone(x,y,z,angle)
 			playfx(level._effect["powerup_grabbed"], (x,y,z));
 			boneModel delete();
 			boneTrigger delete();
+			level thread sendsubtitletext("???", 3, boneLines(), 3);
 			break;
 		}
 	}
@@ -852,6 +854,7 @@ spawnTombstone(x,y,z,angle)
 			i playsound( "zmb_weap_wall" );
 			playfx(level._effect["rise_dust"], (x,y,z));
 			playfx(level._effect["powerup_grabbed"], (x,y,z));
+			level thread sendsubtitletext("???", 3, "Why are you touching her grave!", 3);
 			level.bonescollected += 1;
 			thread spawnRaygun(x,y,z,angle);
 			
@@ -869,6 +872,8 @@ spawnRaygun(x,y,z,angle)
 	raygunModel = spawn( "script_model", (x,y,z+60), 1, 100, 100 );
 	raygunModel setModel ("weapon_usa_ray_gun");
 	raygunModel rotateTo ((0,angle+90,0),.1);
+	
+	level thread sendsubtitletext("???", 1, "Looks like she gave you a gift. How thoughtful!", 3);
 	
 	while(1)
 	{
@@ -903,6 +908,7 @@ spawnShovel(x,y,z,angle)
 			level notify ("pickedup_ee_shovel");
 			shovelModel delete();
 			shovelTrigger delete();
+			level thread sendsubtitletext("???", 3, "What are you doing with that shovel?", 4);
 			break;
 		}
 	}
@@ -3210,12 +3216,27 @@ enableExfil()
 		level waittill ("can_exfil");
 		level endon ("exfil_started");
 		level.canexfil = 1;
-		foreach ( player in get_players() )
-        	player thread showExfilMessage();
+		
+		if(getDvarInt("enable_custom_subtitles") == 1)
+		{
+			level thread sendsubtitletext(chooseAnnouncer(), 1, exfilAvailable(), 5);
+		}
+		else
+		{
+			foreach ( player in get_players() )
+	       		player thread showExfilMessage();
+		}
 		wait 120;
 		level.canexfil = 0;
-		foreach ( player in get_players() )
-        	player thread showExfilMessage();
+		if(getDvarInt("enable_custom_subtitles") == 1)
+		{
+			level thread sendsubtitletext(chooseAnnouncer(), 1, exfilUnAvailable(), 5);
+		}
+		else
+		{
+			foreach ( player in get_players() )
+        		player thread showExfilMessage();
+        }
 	}
 }
 
@@ -3286,6 +3307,7 @@ spawnExfil()
 						level thread spawnExit();
 						level thread spawnMiniBoss();
 						level notify ("exfil_started");
+						level thread sendsubtitletext(chooseAnnouncer(), 1, "The portal has opened at " + level.escapezone + "", 5);
 					
 						fadetowhite fadeovertime( 1 );
 						fadetowhite.alpha = 0;
@@ -3548,7 +3570,7 @@ spawnExit()
 			escapetransition.alpha = 0;
 			escapetransition.horzalign = "fullscreen";
 			escapetransition.vertalign = "fullscreen";
-			escapetransition.foreground = 1;
+			escapetransition.foreground = 0;
 			escapetransition setshader( "white", 640, 480 );
 			escapetransition.color = (0,0,0);
 			escapetransition fadeovertime( 0.5 );
@@ -3561,6 +3583,7 @@ spawnExit()
 			i disableinvulnerability();
 			if (level.players.size == 1)
 			{
+				level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
 				level notify( "end_game" );
 			}
 			else
@@ -3571,6 +3594,7 @@ spawnExit()
 				escapetransition destroy();
 				if (checkAmountPlayers())
 				{
+					level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
 					level notify( "end_game" );
 				}
 				
@@ -4535,6 +4559,7 @@ player_rageinducer()
 startInducer()
 {
 	level thread show_big_message("Rampage Statue has been activated!", "zmb_laugh_child");
+	level thread sendsubtitletext("Rampage Statue", 1, "Can you prove your worthiness to the statue?", 3);
 	thread nuke_flash();
 	level.ragestarted = 1;
 	level thread change_zombies_speed("sprint");
@@ -4548,6 +4573,7 @@ startInducer()
 	thread nuke_flash();
 	level thread change_zombies_speed("walk");
 	show_big_message("Rampage Statue is satisfied", "zmb_cha_ching");
+	level thread sendsubtitletext("Rampage Statue", 1, "The statue is happy! It brought you something special!", 5);
 	if (level.round_number < 20)
 	{
 		level.zombie_vars[ "zombie_spawn_delay" ] = 2;
@@ -7139,7 +7165,8 @@ command_thread()
 				level force_exfil();
 				break;
 			case ".restartround":
-				level restart_round();
+//				level restart_round();
+				new_round_think(true);
 				break;
 			case ".infect":
 				player force_infection();
@@ -7361,6 +7388,7 @@ force_infection()
 init_infected()
 {
 	level thread setCureLocation();
+	level thread infectionSpread();
 }
 
 player_infected()
@@ -7661,6 +7689,271 @@ BloodInfectHUD()
 	}
 }
 
+infectionSpread()
+{
+	while(1)
+	{
+		if (getDvarInt("infected_start_round") == level.round_number)
+		{
+			level sendsubtitletext(chooseAnnouncer(), 1, "The Element 115 in you has caused you to be vulnerable to infection! Be careful!", 5);
+			break;
+		}
+		else
+		{
+			wait 0.1;
+		}
+	}
+}
 
+// Remove Round Limit probably
 
+new_round_think( restart )
+{
+    if ( !isdefined( restart ) )
+        restart = 0;
 
+/#
+    println( "ZM >> round_think start" );
+#/
+    level endon( "end_round_think" );
+
+    if ( !( isdefined( restart ) && restart ) )
+    {
+        if ( isdefined( level.initial_round_wait_func ) )
+            [[ level.initial_round_wait_func ]]();
+
+        if ( !( isdefined( level.host_ended_game ) && level.host_ended_game ) )
+        {
+            players = get_players();
+
+            foreach ( player in players )
+            {
+                if ( !( isdefined( player.hostmigrationcontrolsfrozen ) && player.hostmigrationcontrolsfrozen ) )
+                {
+                    player freezecontrols( 0 );
+/#
+                    println( " Unfreeze controls 8" );
+#/
+                }
+
+                player maps\mp\zombies\_zm_stats::set_global_stat( "rounds", level.round_number );
+            }
+        }
+    }
+
+    setroundsplayed( level.round_number );
+
+    for (;;)
+    {
+        maxreward = 50 * level.round_number;
+
+        if ( maxreward > 500 )
+            maxreward = 500;
+
+        level.zombie_vars["rebuild_barrier_cap_per_round"] = maxreward;
+        level.pro_tips_start_time = gettime();
+        level.zombie_last_run_time = gettime();
+
+        if ( isdefined( level.zombie_round_change_custom ) )
+            [[ level.zombie_round_change_custom ]]();
+        else
+        {
+            level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_start" );
+            round_one_up();
+        }
+
+        maps\mp\zombies\_zm_powerups::powerup_round_start();
+        players = get_players();
+        array_thread( players, maps\mp\zombies\_zm_blockers::rebuild_barrier_reward_reset );
+
+        if ( !( isdefined( level.headshots_only ) && level.headshots_only ) && !restart )
+            level thread award_grenades_for_survivors();
+
+        bbprint( "zombie_rounds", "round %d player_count %d", level.round_number, players.size );
+/#
+        println( "ZM >> round_think, round=" + level.round_number + ", player_count=" + players.size );
+#/
+        level.round_start_time = gettime();
+
+        while ( level.zombie_spawn_locations.size <= 0 )
+            wait 0.1;
+
+        level thread [[ level.round_spawn_func ]]();
+        level notify( "start_of_round" );
+        recordzombieroundstart();
+        players = getplayers();
+
+        for ( index = 0; index < players.size; index++ )
+        {
+            zonename = players[index] get_current_zone();
+
+            if ( isdefined( zonename ) )
+                players[index] recordzombiezone( "startingZone", zonename );
+        }
+
+        if ( isdefined( level.round_start_custom_func ) )
+            [[ level.round_start_custom_func ]]();
+
+        [[ level.round_wait_func ]]();
+        level.first_round = 0;
+        level notify( "end_of_round" );
+        level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_end" );
+        uploadstats();
+
+        if ( isdefined( level.round_end_custom_logic ) )
+            [[ level.round_end_custom_logic ]]();
+
+        players = get_players();
+
+        if ( isdefined( level.no_end_game_check ) && level.no_end_game_check )
+        {
+            level thread last_stand_revive();
+            level thread spectators_respawn();
+        }
+        else if ( 1 != players.size )
+            level thread spectators_respawn();
+
+        players = get_players();
+        array_thread( players, maps\mp\zombies\_zm_pers_upgrades_system::round_end );
+        timer = level.zombie_vars["zombie_spawn_delay"];
+
+        if ( timer > 0.08 )
+            level.zombie_vars["zombie_spawn_delay"] = timer * 0.95;
+        else if ( timer < 0.08 )
+            level.zombie_vars["zombie_spawn_delay"] = 0.08;
+
+        if ( level.gamedifficulty == 0 )
+            level.zombie_move_speed = level.round_number * level.zombie_vars["zombie_move_speed_multiplier_easy"];
+        else
+            level.zombie_move_speed = level.round_number * level.zombie_vars["zombie_move_speed_multiplier"];
+
+        level.round_number++;
+
+//        if ( 255 < level.round_number )
+ //           level.round_number = 255;
+
+        setroundsplayed( level.round_number );
+        matchutctime = getutc();
+        players = get_players();
+
+        foreach ( player in players )
+        {
+            if ( level.curr_gametype_affects_rank && level.round_number > 3 + level.start_round )
+                player maps\mp\zombies\_zm_stats::add_client_stat( "weighted_rounds_played", level.round_number );
+
+            player maps\mp\zombies\_zm_stats::set_global_stat( "rounds", level.round_number );
+            player maps\mp\zombies\_zm_stats::update_playing_utc_time( matchutctime );
+        }
+
+        check_quickrevive_for_hotjoin();
+        level round_over();
+        level notify( "between_round_over" );
+        restart = 0;
+    }
+}
+
+//Custom Subtitles
+
+sendsubtitletext(charactername, team, text, time)
+{
+	if(getDvarInt("enable_custom_subtitles") == 1)
+	{	
+		if(isDefined(level.subtitleText))
+		{
+			level waittill ("subtitle_done");
+			level.subtitleText destroy();
+		}
+	
+	
+		if (team == 1)
+		{
+			teamcolor = "^4";
+		}
+		else if (team == 2)
+		{
+			teamcolor = "^1";
+		}
+		else
+		{
+			teamcolor = "^3";
+		}
+	
+	
+		level.subtitleText = newHudElem();
+    	level.subtitleText.alignx = "center";
+    	level.subtitleText.aligny = "bottom";
+    	level.subtitleText.horzalign = "center";
+    	level.subtitleText.vertalign = "bottom";
+    	level.subtitleText.fontscale = 1.5;
+    	level.subtitleText.y = 0;
+    
+    	level.subtitleText.foreground = 1;
+    	level.subtitleText.alpha = 0;
+    	level.subtitleText.hidewheninmenu = 1;
+    	level.subtitleText.font = "default";
+
+		level.subtitleText settext( teamcolor + charactername + "^7: " + text );
+		level.subtitleText.color = ( 1, 1, 1 );
+
+    	level.subtitleText moveovertime( 0.25 );
+    	level.subtitleText fadeovertime( 0.25 );
+    	level.subtitleText.alpha = 1;
+    	level.subtitleText.y = -10;
+    
+    	wait time;
+    
+    	level.subtitleText moveovertime( 0.25 );
+    	level.subtitleText fadeovertime( 0.25 );
+    	level.subtitleText.alpha = 0;
+    	level.subtitleText.y = -20;
+    	wait 1.1;
+    	level.subtitleText destroy();
+    	level notify ("subtitle_done");
+    }
+}
+
+exfilAvailable()
+{
+	msg = array("An escape portal is available!","A portal has opened for exfil.","Exfil available!","A tear into the aether has opened. You can exfil through it!");
+	
+	chance = randomintrange(0, msg.size - 1);
+	
+	return msg[chance];
+}
+
+exfilUnAvailable()
+{
+	msg = array("The portal has closed!","Exfil window closed!","The aether tear has closed. Should re-open soon!");
+	
+	chance = randomintrange(0, msg.size - 1);
+	
+	return msg[chance];
+}
+
+boneLines()
+{
+	if (level.bonescollected == 1)
+		text = "What are you doing?";
+	else if (level.bonescollected == 2)
+		text = "Why are you doing this!";
+	else if (level.bonescollected == 3)
+		text = "Hey! stop it!";
+	
+	return text;
+}
+
+chooseAnnouncer()
+{
+	if (getDvar("mapname") == "zm_transit")
+		return "Richtofen";
+	else if (getDvar("mapname") == "zm_nuked")
+		return "Richtofen";
+	else if (getDvar("mapname") == "zm_tomb")
+		return "Samantha Maxis";
+	else if (getDvar("mapname") == "zm_prison")
+		return "Afterlife Spirit";
+	else if (getDvar("mapname") == "zm_buried")
+		return "Richtofen";
+	else if (getDvar("mapname") == "zm_highrise")
+		return "Richtofen";
+}
