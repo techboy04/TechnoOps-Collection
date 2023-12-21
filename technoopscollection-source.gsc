@@ -27,7 +27,7 @@
 
 main()
 {
-	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
+//	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
 	replacefunc(maps\mp\zombies\_zm::round_think, ::new_round_think);
 	init_dvars();
 	main_directorscut();
@@ -778,10 +778,18 @@ giveStarterWeapons()
 	if (level.round_number >= 5 && level.round_number < 20)
 	{
 		self giveweapon("galil_zm");
+		if (self.pers[ "isBot" ] == 1)
+		{
+			self SetSpawnWeapon("galil_zm");
+		}
 	}
 	else if (level.round_number >= 20)
 	{
 		self giveweapon("galil_upgraded_zm");
+		if (self.pers[ "isBot" ] == 1)
+		{
+			self SetSpawnWeapon("galil_upgraded_zm");
+		}
 	}
 	if (level.round_number >= 15)
 	{
@@ -3275,8 +3283,25 @@ spawnExfil()
 							player thread showvoting(i);
 							player thread checkVotingInput();
 							player.canrespawn = 0;
+							if (player.pers[ "isBot" ] == 1)
+							{
+								level.exfilplayervotes += 1;
+								player.exfilvoted = 1;
+							}
 						}
-						level waittill_any ("voting_finished","voting_expired");
+
+						level.exfilplayervotes += 1;
+						i.exfilvoted = 1;
+
+						if (level.exfilplayervotes >= level.votingrequirement)
+						{
+							level.votingsuccess = 1;
+							level notify ("voting_finished");
+						}
+						else
+						{
+							level waittill_any ("voting_finished","voting_expired");
+						}
 					}
 					if (level.votingsuccess == 1)
 						{
@@ -3597,6 +3622,10 @@ spawnExit()
 					level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
 					level notify( "end_game" );
 				}
+				else
+				{
+					level thread sendsubtitletext(chooseAnnouncer(), 1, i + " has escaped!", 2);
+				}
 				
 			}
 			level waittill ("end_game");
@@ -3894,7 +3923,7 @@ checkVotingInput()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	while((level.exfilvoting == 1) && (self.exfilvoted == 0) && (level.exfilvoteexec != self))
+	while(((level.exfilvoting == 1) && (self.exfilvoted == 0) && (level.exfilvoteexec != self)) || self.pers[ "isBot" ] == 1)
 	{
 		if(self actionslotfourbuttonpressed())
 		{
@@ -3914,7 +3943,7 @@ checkIfPlayersVoted()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	level.votingrequirement = int(getRequirement());
+	level.votingrequirement = level.players.size;
 	while(1)
 	{
 		if (level.exfilplayervotes >= level.votingrequirement)
@@ -3950,38 +3979,7 @@ exfilVoteTimer()
 
 getRequirement()
 {
-	if (level.players.size == 1)
-	{
-		return 1;
-	}
-	else if (level.players.size == 2)
-	{
-		return 2;
-	}
-	else if (level.players.size == 3)
-	{
-		return 2;
-	}
-	else if (level.players.size == 4)
-	{
-		return 3;
-	}
-	else if (level.players.size == 5)
-	{
-		return 3;
-	}
-	else if (level.players.size == 6)
-	{
-		return 4;
-	}
-	else if (level.players.size == 7)
-	{
-		return 5;
-	}
-	else if (level.players.size == 8)
-	{
-		return 6;
-	}
+	return level.players.size;
 }
 
 spawnMiniBoss()
@@ -4634,8 +4632,24 @@ spawnInducer()
 						{
 							player thread showrampagevoting(i);
 							player thread checkRampageVotingInput();
+							if (player.pers[ "isBot" ] == 1)
+							{
+								level.exfilplayervotes += 1;
+								player.rampagevoted = 1;
+							}
 						}
-						level waittill_any ("voting_finished","voting_expired");
+						level.exfilplayervotes += 1;
+						i.rampagevoted = 1;
+
+						if (level.exfilplayervotes >= level.votingrequirement)
+						{
+							level.votingsuccess = 1;
+							level notify ("voting_finished");
+						}
+						else
+						{
+							level waittill_any ("voting_finished","voting_expired");
+						}
 					}
 					if (level.votingsuccess == 1)
 					{
@@ -4829,7 +4843,7 @@ checkRampageVotingInput()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	while((level.rampagevoting == 1) && (self.rampagevoted == 0) && (level.rampagevoteexec != self))
+	while(((level.rampagevoting == 1) && (self.rampagevoted == 0) && (level.rampagevoteexec != self)) || self.pers[ "isBot" ] == 1)
 	{
 		if(self actionslotfourbuttonpressed())
 		{
@@ -4871,7 +4885,7 @@ checkRampageIfPlayersVoted()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	level.votingrequirement = int(getRequirement());
+	level.votingrequirement = level.players.size;
 	while(1)
 	{
 		if (level.rampageplayervotes >= level.votingrequirement)
