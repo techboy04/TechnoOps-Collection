@@ -24,7 +24,6 @@
 #include maps\mp\zombies\_zm_spawner;
 #include maps\mp\zombies\_zm_audio_announcer;
 
-
 main()
 {
 //	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
@@ -46,6 +45,8 @@ init()
     level thread betaMessage();
     level thread command_thread();
     level thread updateSomeSettings();
+    level.using_solo_revive = true;
+    level.revive_machine_is_solo = true;
     
     if(getDvar("mapname") == "zm_transit" && getDvarInt("solo_tombstone") == 1)
     {
@@ -3167,7 +3168,6 @@ init_exfil()
     level.successfulexfil = 0;
     level.gameisending = 0;
     level.exfilplayervotes = 0;
-    level.votingrequirement = 0;
     level thread spawnExfil();
     level thread enableExfil();
     level thread checkForRound();
@@ -3283,39 +3283,30 @@ spawnExfil()
 				
 				if (level.exfilvoting == 0)
 				{
+					level.exfilplayervotes = 0;
 					level.exfilvoting = 1;
-					if (level.players.size == 1)
+
+					level.exfilplayervotes += 1;
+					self.exfilvoted = 1;
+					if (level.exfilplayervotes >= level.players.size)
 					{
 						level.votingsuccess = 1;
+						level notify ("voting_finished");
 					}
-					else
+
+					level thread exfilVoteTimer();
+					foreach ( player in get_players() )
 					{
-						level thread exfilVoteTimer();
-						foreach ( player in get_players() )
-						{
-							player thread showvoting(i);
-							player thread checkVotingInput();
-							player.canrespawn = 0;
-							if (player.pers[ "isBot" ] == 1)
-							{
-								level.exfilplayervotes += 1;
-								player.exfilvoted = 1;
-							}
-						}
-
-						level.exfilplayervotes += 1;
-						i.exfilvoted = 1;
-
-						if (level.exfilplayervotes >= level.votingrequirement)
-						{
-							level.votingsuccess = 1;
-							level notify ("voting_finished");
-						}
-						else
-						{
-							level waittill_any ("voting_finished","voting_expired");
-						}
+						player thread showvoting(i);
+						player thread checkVotingInput();
+						player.canrespawn = 0;
 					}
+					
+					if (level.votingsuccess != 1)
+					{
+						level waittill_any ("voting_finished","voting_expired");
+					}
+
 					if (level.votingsuccess == 1)
 						{
 						level.exfilvoting = 0;
@@ -3910,7 +3901,7 @@ showVoting(execPlayer)
 	while(1)
 	{
 		voting_text setValue (level.votingtimer);
-		votesLeft = level.votingrequirement - level.exfilplayervotes;
+		votesLeft = level.players.size - level.exfilplayervotes;
 		voting_votes setValue (votesLeft);
 		if (self.exfilvoted == 0)
 		{
@@ -3936,13 +3927,13 @@ checkVotingInput()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	while((level.exfilvoting == 1) && (self.exfilvoted == 0) && (level.exfilvoteexec != self))
+	while(level.exfilvoting == 1 && self.exfilvoted == 0)
 	{
-		if(self actionslotfourbuttonpressed() || self.pers[ "isBot" ] == 1)
+		if(self actionslotfourbuttonpressed() || (isDefined(self.bot)))
 		{
 			level.exfilplayervotes += 1;
 			self.exfilvoted = 1;
-			if (level.exfilplayervotes >= level.votingrequirement)
+			if (level.exfilplayervotes >= level.players.size)
 			{
 				level.votingsuccess = 1;
 				level notify ("voting_finished");
@@ -3956,10 +3947,9 @@ checkIfPlayersVoted()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	level.votingrequirement = level.players.size;
 	while(1)
 	{
-		if (level.exfilplayervotes >= level.votingrequirement)
+		if (level.exfilplayervotes >= level.players.size)
 		{
 			level.votingsuccess = 1;
 			level notify ("voting_finished");
@@ -3978,7 +3968,6 @@ exfilVoteTimer()
 		level.votingtimer -= 1;
 		if (level.votingtimer < 0)
 		{
-			level.votingrequirement = 0;
 			level.exfilplayervotes = 0;
 			foreach (player in getPlayers())
 				player.exfilvoted = 0;
@@ -4616,7 +4605,7 @@ spawnInducer()
 {
 	level.ragestarted = 0;
 	rampageTrigger = spawn( "trigger_radius", (level.effectlocation), 1, 50, 50 );
-	rampageTrigger setHintString("^7Press ^3&&1 ^7to activate Rampage Statue (All players need to be nearby)\nAll zombies will run for a certain amount of rounds");
+	rampageTrigger setHintString("^7Press ^3&&1 ^7to activate Rampage Statuen\nAll zombies will run for a certain amount of rounds");
 	rampageTrigger setcursorhint( "HINT_NOICON" );
 	rageInducerModel = spawn( "script_model", (level.effectlocation));
 	rageInducerModel setmodel ("defaultactor");
@@ -4632,37 +4621,27 @@ spawnInducer()
 				if (level.rampagevoting == 0)
 				{
 					level.rampagevoting = 1;
+					level.exfilplayervotes = 0;
 					
-					if(level.players.size == 1)
+					level.exfilplayervotes += 1;
+					i.rampagevoted = 1;
+					if (level.exfilplayervotes >= level.players.size)
 					{
 						level.votingsuccess = 1;
+						level notify ("voting_finished");
 					}
 					
-					else
+					level thread rampageVoteTimer();
+					
+					foreach ( player in get_players() )
 					{
-						level thread rampageVoteTimer();
-						foreach ( player in get_players() )
-						{
-							player thread showrampagevoting(i);
-							player thread checkRampageVotingInput();
-							if (player.pers[ "isBot" ] == 1)
-							{
-								level.exfilplayervotes += 1;
-								player.rampagevoted = 1;
-							}
-						}
-						level.exfilplayervotes += 1;
-						i.rampagevoted = 1;
+						player thread showrampagevoting(i);
+						player thread checkRampageVotingInput();
+					}
 
-						if (level.exfilplayervotes >= level.votingrequirement)
-						{
-							level.votingsuccess = 1;
-							level notify ("voting_finished");
-						}
-						else
-						{
-							level waittill_any ("voting_finished","voting_expired");
-						}
+					if (level.votingsuccess != 1)
+					{
+						level waittill_any ("voting_finished","voting_expired");
 					}
 					if (level.votingsuccess == 1)
 					{
@@ -4829,7 +4808,7 @@ showrampageVoting(activator)
 	while(1)
 	{
 		voting_text setValue (level.votingtimer);
-		votesLeft = level.votingrequirement - level.exfilplayervotes;
+		votesLeft = level.players.size - level.exfilplayervotes;
 //		votesLeft = getRequirement();
 		voting_votes setValue (votesLeft);
 		if (self.rampagevoted == 0)
@@ -4856,13 +4835,14 @@ checkRampageVotingInput()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	while((level.rampagevoting == 1) && (self.rampagevoted == 0) && (level.rampagevoteexec != self))
+	
+	while(level.rampagevoting == 1 && self.rampagevoted == 0)
 	{
-		if(self actionslotfourbuttonpressed()  || self.pers[ "isBot" ] == 1)
+		if(self actionslotfourbuttonpressed() || (isDefined(self.bot)))
 		{
 			level.exfilplayervotes += 1;
 			self.rampagevoted = 1;
-			if (level.exfilplayervotes >= level.votingrequirement)
+			if (level.exfilplayervotes >= level.players.size)
 			{
 				level.votingsuccess = 1;
 				level notify ("voting_finished");
@@ -4882,9 +4862,8 @@ rampageVoteTimer()
 		level.votingtimer -= 1;
 		if (level.votingtimer < 0)
 		{
-			level.votingrequirement = 0;
 			level.rampageplayervotes = 0;
-			foreach (player in getPlayers())
+			foreach (player in get_players())
 				player.rampagevoted = 0;
 			level.rampagevoting = 0;
 			level.votingsuccess = 0;
@@ -4898,10 +4877,9 @@ checkRampageIfPlayersVoted()
 {
 	level endon ("voting_finished");
 	level endon ("voting_expired");
-	level.votingrequirement = level.players.size;
 	while(1)
 	{
-		if (level.rampageplayervotes >= level.votingrequirement)
+		if (level.rampageplayervotes >= level.players.size)
 		{
 			level.votingsuccess = 1;
 			level notify ("voting_finished");
@@ -7188,9 +7166,9 @@ command_thread()
 			case ".credits":
 				player iPrintLn("^6Thanks to the Plutonium community for helping with portions of the mod!\n^2Special thanks to:\n^1Resxt, Bandit, afluffyofox, hinder, ZECxR3ap3r, Jezuz, and 2 Millimeter");
 				break;
-//			case ".forceexfil":
-//				level force_exfil();
-//				break;
+			case ".forceexfil":
+				level force_exfil();
+				break;
 //			case ".restartround":
 //				level restart_round();
 //				new_round_think(true);
