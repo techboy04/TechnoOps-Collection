@@ -7166,9 +7166,9 @@ command_thread()
 			case ".credits":
 				player iPrintLn("^6Thanks to the Plutonium community for helping with portions of the mod!\n^2Special thanks to:\n^1Resxt, Bandit, afluffyofox, hinder, ZECxR3ap3r, Jezuz, and 2 Millimeter");
 				break;
-			case ".forceexfil":
-				level force_exfil();
-				break;
+//			case ".forceexfil":
+//				level force_exfil();
+//				break;
 //			case ".restartround":
 //				level restart_round();
 //				new_round_think(true);
@@ -7187,7 +7187,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.19");
+	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.20");
 }
 
 modslist_text()
