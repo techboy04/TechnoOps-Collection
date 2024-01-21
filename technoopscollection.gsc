@@ -21,6 +21,7 @@
 #include maps\mp\zombies\_zm_chugabud;
 #include maps\mp\_visionset_mgr;
 #include maps\mp\zombies\_zm;
+#include maps\mp\zombies\_zm_powerups;
 #include maps\mp\zombies\_zm_spawner;
 #include maps\mp\zombies\_zm_audio_announcer;
 
@@ -29,6 +30,15 @@ main()
 //	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
 	replacefunc(maps\mp\zombies\_zm::round_think, ::new_round_think);
 	replacefunc(maps\mp\zombies\_zm::round_over, ::new_round_over);
+	replacefunc(maps\mp\zombies\_zm_buildables::buildable_use_hold_think_internal, ::buildable_use_hold_think_internal_new);
+	replacefunc(maps\mp\zombies\_zm_powerups::full_ammo_on_hud, ::full_ammo_on_hud_new);
+	replacefunc(maps\mp\zombies\_zm_powerups::start_fire_sale, ::start_fire_sale_new);
+	replacefunc(maps\mp\zombies\_zm_powerups::insta_kill_powerup, ::insta_kill_powerup_new);
+	replacefunc(maps\mp\zombies\_zm_powerups::double_points_powerup, ::double_points_powerup_new);
+	replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter, ::new_start_carpenter);
+	replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter_new, ::new_start_carpenter_new);
+	replacefunc(maps\mp\zombies\_zm_powerups::full_ammo_powerup, ::full_ammo_powerup_new);
+	replacefunc(maps\mp\zombies\_zm_pers_upgrades::pers_upgrade_init, ::pers_upgrade_init_new);
 
 	init_dvars();
 	main_directorscut();
@@ -282,7 +292,7 @@ create_dvar( dvar, set )
 init_dvars()
 {
 	create_dvar("enable_custom_subtitles", 1);
-	
+	create_dvar("enable_permaperks", 0);
 	//Rage Inducer
 	create_dvar("enable_rampage", 1);
 	create_dvar("rampage_max_round", 20);
@@ -431,11 +441,6 @@ init_player_things()
 		{
 			self thread spawnIfRoundOne();
 			self thread spawnPlayerEarly();
-		}
-
-		if(getDvarInt("enable_directorscut") == 1)
-		{
-			self thread player_directorscut();
 		}
 		
 		self iprintln("Loaded TechnoOps Collection - Have fun!");
@@ -717,6 +722,12 @@ weaponanimation()
 	self giveweapon(weap);
 	self switchtoweapon(weap);
 	level.skipstartcheck = 1;
+
+	if(getDvarInt("enable_directorscut") == 1)
+	{
+		player_directorscut();
+	}
+
 }
 
 spawnIfRoundOne() //spawn player
@@ -845,7 +856,8 @@ spawnBone(x,y,z,angle)
 			playfx(level._effect["powerup_grabbed"], (x,y,z));
 			boneModel delete();
 			boneTrigger delete();
-			level thread sendsubtitletext("???", 3, boneLines(), 3);
+			foreach ( player in get_players() )
+				player thread sendsubtitletext("???", 3, boneLines(), 3);
 			break;
 		}
 	}
@@ -876,7 +888,8 @@ spawnTombstone(x,y,z,angle)
 			i playsound( "zmb_weap_wall" );
 			playfx(level._effect["rise_dust"], (x,y,z));
 			playfx(level._effect["powerup_grabbed"], (x,y,z));
-			level thread sendsubtitletext("???", 3, "Why are you touching her grave!", 3);
+			foreach ( player in get_players() )
+				player thread sendsubtitletext("???", 3, "Why are you touching her grave!", 3);
 			level.bonescollected += 1;
 			thread spawnRaygun(x,y,z,angle);
 			
@@ -895,7 +908,8 @@ spawnRaygun(x,y,z,angle)
 	raygunModel setModel ("weapon_usa_ray_gun");
 	raygunModel rotateTo ((0,angle+90,0),.1);
 	
-	level thread sendsubtitletext("???", 1, "Looks like she gave you a gift. How thoughtful!", 3);
+	foreach ( player in get_players() )
+		player thread sendsubtitletext("???", 1, "Looks like she gave you a gift. How thoughtful!", 3);
 	
 	while(1)
 	{
@@ -930,7 +944,8 @@ spawnShovel(x,y,z,angle)
 			level notify ("pickedup_ee_shovel");
 			shovelModel delete();
 			shovelTrigger delete();
-			level thread sendsubtitletext("???", 3, "What are you doing with that shovel?", 4);
+			foreach ( player in get_players() )
+				player thread sendsubtitletext("???", 3, "What are you doing with that shovel?", 4);
 			break;
 		}
 	}
@@ -952,19 +967,7 @@ init_bo4ammo()
 
 player_bo4ammo()
 {
-	self thread monitorBO4maxammo();
-	self thread carpenter();
-}
 
-monitorBO4maxammo()
-{
-    self endon("disconnect");
-    level endon("game_end");
-    for(;;) {
-        self waittill("zmb_max_ammo");
-        self doBO4MaxAmmo();
-        wait 0.02;
-    }
 }
 
 doBO4MaxAmmo()
@@ -976,16 +979,6 @@ doBO4MaxAmmo()
     }
 }
 
-carpenter()
-{
-	level endon("end_game");
-	self endon("disconnect");
-	for(;;)
-	{
-		level waittill( "carpenter_finished" );
-		self.shielddamagetaken = 0;
-	}
-}
 
 
 //////////////////////////////////
@@ -2826,32 +2819,6 @@ skip_bus()
 	level.the_bus destroy();
 }
 
-full_ammo_powerup( drop_item, player )
-{
-	players = get_players( player.team );
-
-	if ( isdefined( level._get_game_module_players ) )
-		players = [[ level._get_game_module_players ]]( player );
-
-	for ( i = 0; i < players.size; i++ )
-	{
-		if ( players[i] maps\mp\zombies\_zm_laststand::player_is_in_laststand() )
-			continue;
-
-		primary_weapons = players[i] getweaponslist( 1 );
-		players[i] notify( "zmb_max_ammo" );
-		players[i] notify( "zmb_lost_knife" );
-		players[i] notify( "zmb_disable_claymore_prompt" );
-		players[i] notify( "zmb_disable_spikemore_prompt" );
-
-		for ( x = 0; x < primary_weapons.size; x++ )
-		{
-			if ( players[i] hasweapon( primary_weapons[x] ) )
-				players[i] givemaxammo( primary_weapons[x] );
-		}
-	}
-}
-
 printInputs()
 {
 	while(1)
@@ -2991,7 +2958,7 @@ player_directorscut()
 	wait_network_frame();
 	wait 1;
 	gun = self maps\mp\zombies\_zm_perks::perk_give_bottle_begin("specialty_quickrevive");
-	wait 5;
+	wait 3;
 	self maps\mp\zombies\_zm_perks::perk_give_bottle_end(gun, "specialty_quickrevive");
 	wait 1;
 	self upgrade_gun(self getcurrentweapon());
@@ -3118,6 +3085,7 @@ player_enemycounter()
 enemycounter_hud()
 {
 	level endon("end_game");
+	self endon("disconnect");
 
 	enemycounter = newhudelem();
 	enemycounter.alignx = "center";
@@ -3240,7 +3208,8 @@ enableExfil()
 		
 		if(getDvarInt("enable_custom_subtitles") == 1)
 		{
-			level thread sendsubtitletext(chooseAnnouncer(), 1, exfilAvailable(), 5);
+			foreach ( player in get_players() )
+				player thread sendsubtitletext(chooseAnnouncer(), 1, exfilAvailable(), 5);
 		}
 		else
 		{
@@ -3251,7 +3220,8 @@ enableExfil()
 		level.canexfil = 0;
 		if(getDvarInt("enable_custom_subtitles") == 1)
 		{
-			level thread sendsubtitletext(chooseAnnouncer(), 1, exfilUnAvailable(), 5);
+			foreach ( player in get_players() )
+				player thread sendsubtitletext(chooseAnnouncer(), 1, exfilUnAvailable(), 5);
 		}
 		else
 		{
@@ -3336,7 +3306,8 @@ spawnExfil()
 						level thread spawnExit();
 						level thread spawnMiniBoss();
 						level notify ("exfil_started");
-						level thread sendsubtitletext(chooseAnnouncer(), 1, "The portal has opened at " + level.escapezone + "", 5);
+						foreach ( player in get_players() )
+							player thread sendsubtitletext(chooseAnnouncer(), 1, "The portal has opened at " + level.escapezone + "", 5);
 					
 						fadetowhite fadeovertime( 1 );
 						fadetowhite.alpha = 0;
@@ -3612,7 +3583,8 @@ spawnExit()
 			i disableinvulnerability();
 			if (level.players.size == 1)
 			{
-				level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
+				foreach ( player in get_players() )
+					player thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
 				level notify( "end_game" );
 			}
 			else
@@ -3623,12 +3595,14 @@ spawnExit()
 				escapetransition destroy();
 				if (checkAmountPlayers())
 				{
-					level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
+					foreach ( player in get_players() )
+						player thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
 					level notify( "end_game" );
 				}
 				else
 				{
-					level thread sendsubtitletext(chooseAnnouncer(), 1, i + " has escaped!", 2);
+					foreach ( player in get_players() )
+						player thread sendsubtitletext(chooseAnnouncer(), 1, i + " has escaped!", 2);
 				}
 				
 			}
@@ -4559,7 +4533,8 @@ player_rageinducer()
 startInducer()
 {
 	level thread show_big_message("Rampage Statue has been activated!", "zmb_laugh_child");
-	level thread sendsubtitletext("Rampage Statue", 1, "Can you prove your worthiness to the statue?", 3);
+	foreach ( player in get_players() )
+		player thread sendsubtitletext("Rampage Statue", 1, "Can you prove your worthiness to the statue?", 3);
 	thread nuke_flash();
 	level.ragestarted = 1;
 	level thread change_zombies_speed("sprint");
@@ -4573,7 +4548,8 @@ startInducer()
 	thread nuke_flash();
 	level thread change_zombies_speed("walk");
 	show_big_message("Rampage Statue is satisfied", "zmb_cha_ching");
-	level thread sendsubtitletext("Rampage Statue", 1, "The statue is happy! It brought you something special!", 5);
+	foreach ( player in get_players() )
+		player thread sendsubtitletext("Rampage Statue", 1, "The statue is happy! It brought you something special!", 5);
 	if (level.round_number < 20)
 	{
 		level.zombie_vars[ "zombie_spawn_delay" ] = 2;
@@ -4605,7 +4581,7 @@ spawnInducer()
 {
 	level.ragestarted = 0;
 	rampageTrigger = spawn( "trigger_radius", (level.effectlocation), 1, 50, 50 );
-	rampageTrigger setHintString("^7Press ^3&&1 ^7to activate Rampage Statuen\nAll zombies will run for a certain amount of rounds");
+	rampageTrigger setHintString("^7Press ^3&&1 ^7to activate Rampage Statue\nAll zombies will run for a certain amount of rounds");
 	rampageTrigger setcursorhint( "HINT_NOICON" );
 	rageInducerModel = spawn( "script_model", (level.effectlocation));
 	rageInducerModel setmodel ("defaultactor");
@@ -5598,10 +5574,16 @@ checkPerk()
 		if (self hasPerk("specialty_scavenger") || self hasPerk("specialty_nomotionsensor") || self hasPerk("specialty_finalstand") || self hasPerk("specialty_deadshot"))
 		{
 			self.hasPHD = 1;
+			if(self.initiatephdline == 0)
+			{
+				self.initiatephdline = 1;
+				self thread sendsubtitletext(self.name, 1, "That tastes a bit explosive, that feeling is familiar.", 3);
+			}
 		}
 		else
 		{
 			self.hasPHD = undefined;
+			self.initiatephdline = 0;
 		}
 		
 // Speed Cola makes weapon handling faster
@@ -5822,6 +5804,9 @@ calculateNuke()
     level endon("game_end");
     for(;;) {
         self waittill("nuke_triggered");
+
+    	self thread sendsubtitletext(chooseAnnouncer(), 1, "Kaboom!", 1.5);
+        
         points = ((get_round_enemy_array().size + level.zombie_total) * getDvarInt("usefulnuke_points"));
         
         if (level.zombie_vars[self.team]["zombie_point_scalar"] != 1)
@@ -7187,7 +7172,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.20");
+	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.21");
 }
 
 modslist_text()
@@ -7714,7 +7699,8 @@ infectionSpread()
 	{
 		if (getDvarInt("infected_start_round") == level.round_number)
 		{
-			level sendsubtitletext(chooseAnnouncer(), 1, "The Element 115 in you has caused you to be vulnerable to infection! Be careful!", 5);
+			foreach ( player in get_players() )
+				player sendsubtitletext(chooseAnnouncer(), 1, "The Element 115 in you has caused you to be vulnerable to infection! Be careful!", 5);
 			break;
 		}
 		else
@@ -7916,10 +7902,10 @@ sendsubtitletext(charactername, team, text, time)
 {
 	if(getDvarInt("enable_custom_subtitles") == 1)
 	{	
-		if(isDefined(level.subtitleText))
+		if(isDefined(self.subtitleText))
 		{
-			level waittill ("subtitle_done");
-			level.subtitleText destroy();
+			self waittill ("subtitle_done");
+			self.subtitleText destroy();
 		}
 	
 	
@@ -7937,36 +7923,36 @@ sendsubtitletext(charactername, team, text, time)
 		}
 	
 	
-		level.subtitleText = newHudElem();
-    	level.subtitleText.alignx = "center";
-    	level.subtitleText.aligny = "bottom";
-    	level.subtitleText.horzalign = "center";
-    	level.subtitleText.vertalign = "bottom";
-    	level.subtitleText.fontscale = 1.5;
-    	level.subtitleText.y = 0;
+		self.subtitleText = newclienthudelem( self );
+    	self.subtitleText.alignx = "center";
+    	self.subtitleText.aligny = "bottom";
+    	self.subtitleText.horzalign = "center";
+    	self.subtitleText.vertalign = "bottom";
+    	self.subtitleText.fontscale = 1.5;
+    	self.subtitleText.y = 0;
     
-    	level.subtitleText.foreground = 1;
-    	level.subtitleText.alpha = 0;
-    	level.subtitleText.hidewheninmenu = 1;
-    	level.subtitleText.font = "default";
+    	self.subtitleText.foreground = 1;
+    	self.subtitleText.alpha = 0;
+    	self.subtitleText.hidewheninmenu = 1;
+    	self.subtitleText.font = "default";
 
-		level.subtitleText settext( teamcolor + charactername + "^7: " + text );
-		level.subtitleText.color = ( 1, 1, 1 );
+		self.subtitleText settext( teamcolor + charactername + "^7: " + text );
+		self.subtitleText.color = ( 1, 1, 1 );
 
-    	level.subtitleText moveovertime( 0.25 );
-    	level.subtitleText fadeovertime( 0.25 );
-    	level.subtitleText.alpha = 1;
-    	level.subtitleText.y = -10;
+    	self.subtitleText moveovertime( 0.25 );
+    	self.subtitleText fadeovertime( 0.25 );
+    	self.subtitleText.alpha = 1;
+    	self.subtitleText.y = -10;
     
     	wait time;
     
-    	level.subtitleText moveovertime( 0.25 );
-    	level.subtitleText fadeovertime( 0.25 );
-    	level.subtitleText.alpha = 0;
-    	level.subtitleText.y = -20;
+    	self.subtitleText moveovertime( 0.25 );
+    	self.subtitleText fadeovertime( 0.25 );
+    	self.subtitleText.alpha = 0;
+    	self.subtitleText.y = -20;
     	wait 1.1;
-    	level.subtitleText destroy();
-    	level notify ("subtitle_done");
+    	self.subtitleText destroy();
+    	self notify ("subtitle_done");
     }
 }
 
@@ -8182,4 +8168,418 @@ createTombstone()
 		}
 		i++;
 	}
+}
+
+buildable_use_hold_think_internal_new( player, bind_stub )
+{
+    if ( !isdefined( bind_stub ) )
+        bind_stub = self.stub;
+
+    wait 0.01;
+
+    if ( !isdefined( self ) )
+    {
+        self notify( "build_failed" );
+
+        if ( isdefined( player.buildableaudio ) )
+        {
+            player.buildableaudio delete();
+            player.buildableaudio = undefined;
+        }
+
+        return;
+    }
+
+    if ( !isdefined( self.usetime ) )
+        self.usetime = int( 3000 );
+
+	if (player hasPerk("specialty_fastreload"))
+	{
+		self.usetime = self.usetime/3;
+	}
+	
+    self.build_time = self.usetime;
+    self.build_start_time = gettime();
+    build_time = self.build_time;
+    build_start_time = self.build_start_time;
+    player disable_player_move_states( 1 );
+    player increment_is_drinking();
+    orgweapon = player getcurrentweapon();
+    build_weapon = "zombie_builder_zm";
+
+    if ( isdefined( bind_stub.build_weapon ) )
+        build_weapon = bind_stub.build_weapon;
+
+    player giveweapon( build_weapon );
+    player switchtoweapon( build_weapon );
+    slot = bind_stub.buildablestruct.buildable_slot;
+    bind_stub.buildablezone buildable_set_piece_building( player player_get_buildable_piece( slot ) );
+    player thread player_progress_bar( build_start_time, build_time, bind_stub.building_prompt );
+
+    if ( isdefined( level.buildable_build_custom_func ) )
+        player thread [[ level.buildable_build_custom_func ]]( self.stub );
+
+    while ( isdefined( self ) && player player_continue_building( bind_stub.buildablezone, self.stub ) && gettime() - self.build_start_time < self.build_time )
+        wait 0.05;
+
+    player notify( "buildable_progress_end" );
+    player maps\mp\zombies\_zm_weapons::switch_back_primary_weapon( orgweapon );
+    player takeweapon( "zombie_builder_zm" );
+
+    if ( isdefined( player.is_drinking ) && player.is_drinking )
+        player decrement_is_drinking();
+
+    player enable_player_move_states();
+
+    if ( isdefined( self ) && player player_continue_building( bind_stub.buildablezone, self.stub ) && gettime() - self.build_start_time >= self.build_time )
+    {
+        buildable_clear_piece_building( player player_get_buildable_piece( slot ) );
+        self notify( "build_succeed" );
+    }
+    else
+    {
+        if ( isdefined( player.buildableaudio ) )
+        {
+            player.buildableaudio delete();
+            player.buildableaudio = undefined;
+        }
+
+        buildable_clear_piece_building( player player_get_buildable_piece( slot ) );
+        self notify( "build_failed" );
+    }
+}
+
+// Reworked powerups
+
+full_ammo_on_hud_new( drop_item, player_team )
+{
+   	if(getDvarInt("enable_custom_subtitles") == 1)
+   	{
+   		self endon( "disconnect" );
+   		foreach ( i in get_players() )
+    		i thread sendsubtitletext(chooseAnnouncer(), 1, "Max Ammo!", 1.5);
+    }
+    else
+    {	
+    	hudelem = maps\mp\gametypes_zm\_hud_util::createserverfontstring( "objective", 2, player_team );
+    	hudelem maps\mp\gametypes_zm\_hud_util::setpoint( "TOP", undefined, 0, level.zombie_vars["zombie_timer_offset"] - level.zombie_vars["zombie_timer_offset_interval"] * 2 );
+    	hudelem.sort = 0.5;
+    	hudelem.alpha = 0;
+    	hudelem fadeovertime( 0.5 );
+    	hudelem.alpha = 1;
+
+    	if ( isdefined( drop_item ) )
+        	hudelem.label = drop_item.hint;
+
+    	hudelem thread full_ammo_move_hud( player_team );
+    }
+}
+
+start_fire_sale_new( item )
+{
+    foreach ( i in get_players() )
+    	i thread sendsubtitletext(chooseAnnouncer(), 1, "Fire Sale!", 1.5);
+    
+    if ( level.zombie_vars["zombie_powerup_fire_sale_time"] > 0 && is_true( level.zombie_vars["zombie_powerup_fire_sale_on"] ) )
+    {
+        level.zombie_vars["zombie_powerup_fire_sale_time"] = level.zombie_vars["zombie_powerup_fire_sale_time"] + 30;
+        return;
+    }
+
+    level notify( "powerup fire sale" );
+    level endon( "powerup fire sale" );
+    level thread maps\mp\zombies\_zm_audio_announcer::leaderdialog( "fire_sale" );
+    level.zombie_vars["zombie_powerup_fire_sale_on"] = 1;
+    level thread toggle_fire_sale_on();
+    level.zombie_vars["zombie_powerup_fire_sale_time"] = 30;
+
+    while ( level.zombie_vars["zombie_powerup_fire_sale_time"] > 0 )
+    {
+        wait 0.05;
+        level.zombie_vars["zombie_powerup_fire_sale_time"] = level.zombie_vars["zombie_powerup_fire_sale_time"] - 0.05;
+    }
+
+    level.zombie_vars["zombie_powerup_fire_sale_on"] = 0;
+    level notify( "fire_sale_off" );
+}
+
+insta_kill_powerup_new( drop_item, player )
+{
+    level notify( "powerup instakill_" + player.team );
+    level endon( "powerup instakill_" + player.team );
+
+    if ( isdefined( level.insta_kill_powerup_override ) )
+    {
+        level thread [[ level.insta_kill_powerup_override ]]( drop_item, player );
+        return;
+    }
+
+    if ( is_classic() )
+        player thread maps\mp\zombies\_zm_pers_upgrades_functions::pers_upgrade_insta_kill_upgrade_check();
+
+    team = player.team;
+    level thread insta_kill_on_hud( drop_item, team );
+    level.zombie_vars[team]["zombie_insta_kill"] = 1;
+    foreach ( i in get_players() )
+    	i thread sendsubtitletext(chooseAnnouncer(), 1, "Insta Kill!", 1.5);
+    wait 30;
+    level.zombie_vars[team]["zombie_insta_kill"] = 0;
+    players = get_players( team );
+
+    for ( i = 0; i < players.size; i++ )
+    {
+        if ( isdefined( players[i] ) )
+            players[i] notify( "insta_kill_over" );
+    }
+}
+
+double_points_powerup_new( drop_item, player )
+{
+    level notify( "powerup points scaled_" + player.team );
+    level endon( "powerup points scaled_" + player.team );
+    team = player.team;
+    level thread point_doubler_on_hud( drop_item, team );
+
+    foreach ( i in get_players() )
+    	i thread sendsubtitletext(chooseAnnouncer(), 1, "Double Points!", 1.5);
+
+    if ( isdefined( level.pers_upgrade_double_points ) && level.pers_upgrade_double_points )
+        player thread maps\mp\zombies\_zm_pers_upgrades_functions::pers_upgrade_double_points_pickup_start();
+
+    if ( isdefined( level.current_game_module ) && level.current_game_module == 2 )
+    {
+        if ( isdefined( player._race_team ) )
+        {
+            if ( player._race_team == 1 )
+                level._race_team_double_points = 1;
+            else
+                level._race_team_double_points = 2;
+        }
+    }
+
+    level.zombie_vars[team]["zombie_point_scalar"] = 2;
+    players = get_players();
+
+    for ( player_index = 0; player_index < players.size; player_index++ )
+    {
+        if ( team == players[player_index].team )
+            players[player_index] setclientfield( "score_cf_double_points_active", 1 );
+    }
+
+    wait 30;
+    level.zombie_vars[team]["zombie_point_scalar"] = 1;
+    level._race_team_double_points = undefined;
+    players = get_players();
+
+    for ( player_index = 0; player_index < players.size; player_index++ )
+    {
+        if ( team == players[player_index].team )
+            players[player_index] setclientfield( "score_cf_double_points_active", 0 );
+    }
+}
+		
+new_start_carpenter( origin )
+{
+    foreach ( i in get_players() )
+    	i thread sendsubtitletext(chooseAnnouncer(), 1, "Carpenter!", 1.5);
+    	i.shielddamagetaken = 0;
+    
+    window_boards = getstructarray( "exterior_goal", "targetname" );
+    total = level.exterior_goals.size;
+    carp_ent = spawn( "script_origin", ( 0, 0, 0 ) );
+    carp_ent playloopsound( "evt_carpenter" );
+
+    while ( true )
+    {
+        windows = get_closest_window_repair( window_boards, origin );
+
+        if ( !isdefined( windows ) )
+        {
+            carp_ent stoploopsound( 1 );
+            carp_ent playsoundwithnotify( "evt_carpenter_end", "sound_done" );
+            carp_ent waittill( "sound_done" );
+            break;
+        }
+        else
+            arrayremovevalue( window_boards, windows );
+
+        while ( true )
+        {
+            if ( all_chunks_intact( windows, windows.barrier_chunks ) )
+                break;
+
+            chunk = get_random_destroyed_chunk( windows, windows.barrier_chunks );
+
+            if ( !isdefined( chunk ) )
+                break;
+
+            windows thread maps\mp\zombies\_zm_blockers::replace_chunk( windows, chunk, undefined, maps\mp\zombies\_zm_powerups::is_carpenter_boards_upgraded(), 1 );
+
+            if ( isdefined( windows.clip ) )
+            {
+                windows.clip enable_trigger();
+                windows.clip disconnectpaths();
+            }
+            else
+                blocker_disconnect_paths( windows.neg_start, windows.neg_end );
+
+            wait_network_frame();
+            wait 0.05;
+        }
+
+        wait_network_frame();
+    }
+
+    players = get_players();
+
+    for ( i = 0; i < players.size; i++ )
+        players[i] maps\mp\zombies\_zm_score::player_add_points( "carpenter_powerup", 200 );
+
+    carp_ent delete();
+}
+
+new_start_carpenter_new( origin )
+{
+    foreach ( i in get_players() )
+    	i thread sendsubtitletext(chooseAnnouncer(), 1, "Carpenter!", 1.5);
+    	i.shielddamagetaken = 0;
+
+    level.carpenter_powerup_active = 1;
+    window_boards = getstructarray( "exterior_goal", "targetname" );
+
+    if ( isdefined( level._additional_carpenter_nodes ) )
+        window_boards = arraycombine( window_boards, level._additional_carpenter_nodes, 0, 0 );
+
+    carp_ent = spawn( "script_origin", ( 0, 0, 0 ) );
+    carp_ent playloopsound( "evt_carpenter" );
+    boards_near_players = get_near_boards( window_boards );
+    boards_far_from_players = get_far_boards( window_boards );
+    level repair_far_boards( boards_far_from_players, maps\mp\zombies\_zm_powerups::is_carpenter_boards_upgraded() );
+
+    for ( i = 0; i < boards_near_players.size; i++ )
+    {
+        window = boards_near_players[i];
+        num_chunks_checked = 0;
+        last_repaired_chunk = undefined;
+
+        while ( true )
+        {
+            if ( all_chunks_intact( window, window.barrier_chunks ) )
+                break;
+
+            chunk = get_random_destroyed_chunk( window, window.barrier_chunks );
+
+            if ( !isdefined( chunk ) )
+                break;
+
+            window thread maps\mp\zombies\_zm_blockers::replace_chunk( window, chunk, undefined, maps\mp\zombies\_zm_powerups::is_carpenter_boards_upgraded(), 1 );
+            last_repaired_chunk = chunk;
+
+            if ( isdefined( window.clip ) )
+            {
+                window.clip enable_trigger();
+                window.clip disconnectpaths();
+            }
+            else
+                blocker_disconnect_paths( window.neg_start, window.neg_end );
+
+            wait_network_frame();
+            num_chunks_checked++;
+
+            if ( num_chunks_checked >= 20 )
+                break;
+        }
+
+        if ( isdefined( window.zbarrier ) )
+        {
+            if ( isdefined( last_repaired_chunk ) )
+            {
+                while ( window.zbarrier getzbarrierpiecestate( last_repaired_chunk ) == "closing" )
+                    wait 0.05;
+
+                if ( isdefined( window._post_carpenter_callback ) )
+                    window [[ window._post_carpenter_callback ]]();
+            }
+
+            continue;
+        }
+
+        while ( isdefined( last_repaired_chunk ) && last_repaired_chunk.state == "mid_repair" )
+            wait 0.05;
+    }
+
+    carp_ent stoploopsound( 1 );
+    carp_ent playsoundwithnotify( "evt_carpenter_end", "sound_done" );
+    carp_ent waittill( "sound_done" );
+    players = get_players();
+
+    for ( i = 0; i < players.size; i++ )
+        players[i] maps\mp\zombies\_zm_score::player_add_points( "carpenter_powerup", 200 );
+
+    carp_ent delete();
+    level notify( "carpenter_finished" );
+    level.carpenter_powerup_active = undefined;
+}
+
+full_ammo_powerup_new( drop_item, player )
+{
+    players = get_players( player.team );
+
+    if ( isdefined( level._get_game_module_players ) )
+        players = [[ level._get_game_module_players ]]( player );
+
+    for ( i = 0; i < players.size; i++ )
+    {
+        if ( players[i] maps\mp\zombies\_zm_laststand::player_is_in_laststand() )
+            continue;
+
+        primary_weapons = players[i] getweaponslist( 1 );
+        players[i] notify( "zmb_max_ammo" );
+        players[i] notify( "zmb_lost_knife" );
+        players[i] notify( "zmb_disable_claymore_prompt" );
+        players[i] notify( "zmb_disable_spikemore_prompt" );
+        if (getDvarInt("enable_bo4ammo") == 1)
+        {
+        	players[i] doBO4MaxAmmo();
+        }
+
+        for ( x = 0; x < primary_weapons.size; x++ )
+        {
+            if ( level.headshots_only && is_lethal_grenade( primary_weapons[x] ) )
+                continue;
+
+            if ( isdefined( level.zombie_include_equipment ) && isdefined( level.zombie_include_equipment[primary_weapons[x]] ) )
+                continue;
+
+            if ( isdefined( level.zombie_weapons_no_max_ammo ) && isdefined( level.zombie_weapons_no_max_ammo[primary_weapons[x]] ) )
+                continue;
+
+            if ( players[i] hasweapon( primary_weapons[x] ) )
+                players[i] givemaxammo( primary_weapons[x] );
+        }
+    }
+
+    level thread full_ammo_on_hud( drop_item, player.team );
+}
+
+pers_upgrade_init_new()
+{
+    if (getDvarInt("enable_permaperks") == 1)
+    {
+    	setup_pers_upgrade_boards();
+    	setup_pers_upgrade_revive();
+   		setup_pers_upgrade_multi_kill_headshots();
+    	setup_pers_upgrade_cash_back();
+    	setup_pers_upgrade_insta_kill();
+    	setup_pers_upgrade_jugg();
+    	setup_pers_upgrade_carpenter();
+    	setup_pers_upgrade_flopper();
+    	setup_pers_upgrade_perk_lose();
+    	setup_pers_upgrade_pistol_points();
+    	setup_pers_upgrade_double_points();
+    	setup_pers_upgrade_sniper();
+    	setup_pers_upgrade_box_weapon();
+    	setup_pers_upgrade_nube();
+    	level thread pers_upgrades_monitor();
+    }
 }
