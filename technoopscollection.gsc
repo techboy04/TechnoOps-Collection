@@ -39,7 +39,8 @@ main()
 	replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter_new, ::new_start_carpenter_new);
 	replacefunc(maps\mp\zombies\_zm_powerups::full_ammo_powerup, ::full_ammo_powerup_new);
 	replacefunc(maps\mp\zombies\_zm_pers_upgrades::pers_upgrade_init, ::pers_upgrade_init_new);
-
+	replacefunc(maps\mp\zombies\_zm_magicbox::treasure_chest_move, ::treasure_chest_move_new);
+	
 	init_dvars();
 	main_directorscut();
 }
@@ -55,16 +56,6 @@ init()
     level thread betaMessage();
     level thread command_thread();
     level thread updateSomeSettings();
-    level.using_solo_revive = true;
-    level.revive_machine_is_solo = true;
-    
-    if(getDvar("mapname") == "zm_transit" && getDvarInt("solo_tombstone") == 1)
-    {
-    	level thread createTombstone();
-		level thread turn_tombstone_on();
-    	level.modlist[level.modlist.size] = "Solo Tombstone";
-    	level.modids[level.modids.size] = "solotomb";
-	}
     
 	precacheshader("riotshield_zm_icon");
 	precacheshader("zm_riotshield_tomb_icon");
@@ -256,6 +247,16 @@ init()
     	level thread init_debug();
     }
     
+    level.using_solo_revive = true;
+    level.is_forever_solo_game = true;
+    level.revive_machine_is_solo = true;
+    
+    if(getDvar("mapname") == "zm_transit" && getDvarInt("solo_tombstone") == 1)
+    {
+    	level.modlist[level.modlist.size] = "Solo Tombstone";
+    	level.modids[level.modids.size] = "solotomb";
+	}
+    
 }
 
 onPlayerConnect()
@@ -370,6 +371,8 @@ init_dvars()
     create_dvar("infected_infect_decrease", 5);
     
     create_dvar("infected_cure_price", 1500);
+    
+    create_dvar("enable_timenextround", 1);
 }
 
 init_player_things()
@@ -497,7 +500,7 @@ nuke_flash( team )
 	fadetowhite.foreground = 1;
 	fadetowhite setshader( "white", 640, 480 );
 	fadetowhite fadeovertime( 0.2 );
-	fadetowhite.alpha = 1;
+	fadetowhite.alpha = 0.8;
 	wait 1;
 	fadetowhite fadeovertime( 1 );
 	fadetowhite.alpha = 0;
@@ -3294,7 +3297,7 @@ spawnExfil()
 						fadetowhite.foreground = 1;
 						fadetowhite setshader( "white", 640, 480 );
 						fadetowhite fadeovertime( 0.2 );
-						fadetowhite.alpha = 1;
+						fadetowhite.alpha = 0.8;
 						wait 1;
 					
 						level.exfilstarted = 1;
@@ -5387,9 +5390,8 @@ createTravel(location, destination, angle, whereto)
 					fadetowhite.foreground = 1;
 					fadetowhite setshader( "shellshock_flashed", 640, 480 );
 					fadetowhite fadeovertime( 0.2 );
-					fadetowhite.alpha = 1;
+					fadetowhite.alpha = 0.8;
 					i.ignoreme = 1;
-					i EnableInvulnerability();
 					wait 2;
 					
 					i setorigin (destination);
@@ -5400,7 +5402,6 @@ createTravel(location, destination, angle, whereto)
 					wait 1.1;
 					fadetowhite destroy();
 					i.ignoreme = 0;
-					i DisableInvulnerability();
 				}
 			}
 		}
@@ -7172,7 +7173,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.21");
+	self iprintln("^5View the patchnotes here!\n^3https://techsgames.xyz/technoopspatchnotes\n^5Your Version: ^21.22");
 }
 
 modslist_text()
@@ -7891,7 +7892,14 @@ new_round_over()
     }
     else
     {
-    	wait( time );
+		if(getDvarInt("enable_timenextround") == 1)
+		{
+			timebetweenroundhud(time);
+		}
+		else
+		{
+    		wait( time );
+		}
     }
 }
 
@@ -8002,174 +8010,6 @@ chooseAnnouncer()
 		return "Richtofen";
 }
 
-
-// Solo Tombstone
-
-turn_tombstone_on()
-{
-	while ( 1 )
-	{
-		machine = getentarray( "vending_tombstone", "targetname" );
-		machine_triggers = getentarray( "vending_tombstone", "target" );
-		i = 0;
-		while ( i < machine.size )
-		{
-			machine[ i ] setmodel( level.machine_assets[ "tombstone" ].off_model );
-			i++;
-		}
-		level thread do_initial_power_off_callback( machine, "tombstone" );
-		array_thread( machine_triggers, ::set_power_on, 0 );
-		level waittill( "tombstone_on" );
-		i = 0;
-		while ( i < machine.size )
-		{
-			machine[ i ] setmodel( level.machine_assets[ "tombstone" ].on_model );
-//			machine[ i ] vibrate( vectorScale( ( 0, -1, 0 ), 100 ), 0,3, 0,4, 3 );
-			machine[ i ] playsound( "zmb_perks_power_on" );
-			machine[ i ] thread perk_fx( "tombstone_light" );
-			machine[ i ] thread play_loop_on_machine();
-			i++;
-		}
-		level notify( "specialty_scavenger_power_on" );
-		array_thread( machine_triggers, ::set_power_on, 1 );
-		if ( isDefined( level.machine_assets[ "tombstone" ].power_on_callback ) )
-		{
-			array_thread( machine, level.machine_assets[ "tombstone" ].power_on_callback );
-		}
-		level waittill( "tombstone_off" );
-		if ( isDefined( level.machine_assets[ "tombstone" ].power_off_callback ) )
-		{
-			array_thread( machine, level.machine_assets[ "tombstone" ].power_off_callback );
-		}
-		array_thread( machine, ::turn_perk_off );
-		players = get_players();
-		_a1718 = players;
-		_k1718 = getFirstArrayKey( _a1718 );
-		while ( isDefined( _k1718 ) )
-		{
-			player = _a1718[ _k1718 ];
-			player.hasperkspecialtytombstone = undefined;
-			_k1718 = getNextArrayKey( _a1718, _k1718 );
-		}
-	}
-}
-
-createTombstone()
-{
-	match_string = "";
-	location = level.scr_zm_map_start_location;
-	if ( location != "default" && location == "" && isDefined( level.default_start_location ) )
-	{
-		location = level.default_start_location;
-	}
-	match_string = ( level.scr_zm_ui_gametype + "_perks_" ) + location;
-	pos = [];
-	if ( isDefined( level.override_perk_targetname ) )
-	{
-		structs = getstructarray( level.override_perk_targetname, "targetname" );
-	}
-	else
-	{
-		structs = getstructarray( "zm_perk_machine", "targetname" );
-	}
-	_a3578 = structs;
-	_k3578 = getFirstArrayKey( _a3578 );
-	while ( isDefined( _k3578 ) )
-	{
-		struct = _a3578[ _k3578 ];
-		if ( isDefined( struct.script_string ) )
-		{
-			tokens = strtok( struct.script_string, " " );
-			_a3583 = tokens;
-			_k3583 = getFirstArrayKey( _a3583 );
-			while ( isDefined( _k3583 ) )
-			{
-				token = _a3583[ _k3583 ];
-				if ( token == match_string )
-				{
-					pos[ pos.size ] = struct;
-				}
-				_k3583 = getNextArrayKey( _a3583, _k3583 );
-			}
-		}
-		else pos[ pos.size ] = struct;
-		_k3578 = getNextArrayKey( _a3578, _k3578 );
-	}
-//	if ( !isDefined( pos ) || pos.size == 0 )
-//	{
-//		return;
-//	}
-	precachemodel( "zm_collision_perks1" );
-	i = 0;
-	while ( i < pos.size )
-	{
-		perk = pos[ i ].script_noteworthy;
-		if ( isDefined( perk ) && isDefined( pos[ i ].model ) )
-		{
-			use_trigger = spawn( "trigger_radius_use", pos[ i ].origin + vectorScale( ( 0, -1, 0 ), 30 ), 0, 40, 70 );
-			use_trigger.targetname = "zombie_vending";
-			use_trigger.script_noteworthy = perk;
-			use_trigger triggerignoreteam();
-			perk_machine = spawn( "script_model", pos[ i ].origin );
-			perk_machine.angles = pos[ i ].angles;
-			perk_machine setmodel( pos[ i ].model );
-			if ( isDefined( level._no_vending_machine_bump_trigs ) && level._no_vending_machine_bump_trigs )
-			{
-				bump_trigger = undefined;
-			}
-			else
-			{
-				bump_trigger = spawn( "trigger_radius", pos[ i ].origin, 0, 35, 64 );
-				bump_trigger.script_activated = 1;
-				bump_trigger.script_sound = "zmb_perks_bump_bottle";
-				bump_trigger.targetname = "audio_bump_trigger";
-				if ( perk != "specialty_weapupgrade" )
-				{
-					bump_trigger thread thread_bump_trigger();
-				}
-			}
-			collision = spawn( "script_model", pos[ i ].origin, 1 );
-			collision.angles = pos[ i ].angles;
-			collision setmodel( "zm_collision_perks1" );
-			collision.script_noteworthy = "clip";
-			collision disconnectpaths();
-			use_trigger.clip = collision;
-			use_trigger.machine = perk_machine;
-			use_trigger.bump = bump_trigger;
-			if ( isDefined( pos[ i ].blocker_model ) )
-			{
-				use_trigger.blocker_model = pos[ i ].blocker_model;
-			}
-			if ( isDefined( pos[ i ].script_int ) )
-			{
-				perk_machine.script_int = pos[ i ].script_int;
-			}
-			if ( isDefined( pos[ i ].turn_on_notify ) )
-			{
-				perk_machine.turn_on_notify = pos[ i ].turn_on_notify;
-			}
-			if ( perk == "specialty_scavenger" || perk == "specialty_scavenger_upgrade" )
-			{
-				use_trigger.script_sound = "mus_perks_tombstone_jingle";
-				use_trigger.script_string = "tombstone_perk";
-				use_trigger.script_label = "mus_perks_tombstone_sting";
-				use_trigger.target = "vending_tombstone";
-				perk_machine.script_string = "tombstone_perk";
-				perk_machine.targetname = "vending_tombstone";
-				if ( isDefined( bump_trigger ) )
-				{
-					bump_trigger.script_string = "tombstone_perk";
-				}
-			}
-			if ( isDefined( level._custom_perks[ perk ] ) && isDefined( level._custom_perks[ perk ].perk_machine_set_kvps ) )
-			{
-				[[ level._custom_perks[ perk ].perk_machine_set_kvps ]]( use_trigger, perk_machine, bump_trigger, collision );
-			}
-		}
-		i++;
-	}
-}
-
 buildable_use_hold_think_internal_new( player, bind_stub )
 {
     if ( !isdefined( bind_stub ) )
@@ -8248,6 +8088,9 @@ buildable_use_hold_think_internal_new( player, bind_stub )
         self notify( "build_failed" );
     }
 }
+
+
+
 
 // Reworked powerups
 
@@ -8582,4 +8425,94 @@ pers_upgrade_init_new()
     	setup_pers_upgrade_nube();
     	level thread pers_upgrades_monitor();
     }
+}
+
+treasure_chest_move_new( player_vox )
+{
+    level waittill( "weapon_fly_away_start" );
+    players = get_players();
+    array_thread( players, ::play_crazi_sound );
+
+    if ( isdefined( player_vox ) )
+        player_vox delay_thread( randomintrange( 2, 7 ), maps\mp\zombies\_zm_audio::create_and_play_dialog, "general", "box_move" );
+
+    level waittill( "weapon_fly_away_end" );
+
+    if ( isdefined( self.zbarrier ) )
+        self hide_chest( 1 );
+
+    wait 0.1;
+    post_selection_wait_duration = 7;
+
+    if ( level.zombie_vars["zombie_powerup_fire_sale_on"] == 1 && self [[ level._zombiemode_check_firesale_loc_valid_func ]]() )
+    {
+        current_sale_time = level.zombie_vars["zombie_powerup_fire_sale_time"];
+        wait_network_frame();
+        self thread fire_sale_fix();
+        level.zombie_vars["zombie_powerup_fire_sale_time"] = current_sale_time;
+
+        while ( level.zombie_vars["zombie_powerup_fire_sale_time"] > 0 )
+            wait 0.1;
+    }
+    else
+        post_selection_wait_duration = post_selection_wait_duration + 5;
+
+    level.verify_chest = 0;
+
+    if ( isdefined( level._zombiemode_custom_box_move_logic ) )
+        [[ level._zombiemode_custom_box_move_logic ]]();
+    else
+        default_box_move_logic();
+
+    if ( isdefined( level.chests[level.chest_index].box_hacks["summon_box"] ) )
+        level.chests[level.chest_index] [[ level.chests[level.chest_index].box_hacks["summon_box"] ]]( 0 );
+
+//    wait( post_selection_wait_duration );
+    playfx( level._effect["poltergeist"], level.chests[level.chest_index].zbarrier.origin );
+    level.chests[level.chest_index] show_chest();
+    flag_clear( "moving_chest_now" );
+    self.zbarrier.chest_moving = 0;
+}
+
+timebetweenroundhud(num)
+{
+	if ( isdefined(level.roundtimehud))
+	{
+		level.roundtimehud destroy();
+	}
+	
+	hudtimer = num;
+	
+	hudtimer -= 1;
+	
+	level.roundtimehud = newhudelem();
+
+	level.roundtimehud.alignx = "left";
+	level.roundtimehud.aligny = "top";
+	level.roundtimehud.horzalign = "left";
+	level.roundtimehud.vertalign = "top";
+	level.roundtimehud.x += 5;
+	level.roundtimehud.y = 0;
+
+	level.roundtimehud.fontscale = 2;
+	level.roundtimehud.alpha = 0;
+	level.roundtimehud.color = ( 1, 1, 1 );
+	level.roundtimehud.hidewheninmenu = 1;
+	level.roundtimehud.foreground = 1;
+	level.roundtimehud.label = &"^4Next round starts in ^2";
+
+	level.roundtimehud fadeovertime(0.2);
+	level.roundtimehud.alpha = 1;
+	wait 0.2;
+
+	while(hudtimer >= 0)
+	{
+		level.roundtimehud setValue(hudtimer);
+		wait 1;
+		hudtimer -= 1;
+	}
+	level.roundtimehud fadeovertime(0.2);
+	level.roundtimehud.alpha = 0;
+	wait 0.2;
+	level.roundtimehud destroy();
 }
