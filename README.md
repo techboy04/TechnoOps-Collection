@@ -18,6 +18,7 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 - Useful Nuke
 - Upgraded Perks
 - Global ATM
+- Infection
 
 ### Lightweight
 - Health Bar
@@ -25,6 +26,8 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 - Changable Perk Limit
 - Spawn Early
 - Hitmarker
+- Match Timer
+- Bleedout Bar
 - Secret Music Easter Egg in Survival Maps
 
 ### Tranzit Specific
@@ -32,3 +35,15 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 - Power opens Pack a Punch and other Power required doors
 - Toggleable fog and denizens
 - Jetgun has unlimited ammo
+- Tombstone appears in solo with a solo ability
+- Ladder in Town that leads to the road between Diner and Farm
+- EE step that requires overheat jetgun is skipped
+- Wall Weapon in Town
+
+### Origins Specific
+- Recapture rounds are removed
+- The hatch in the robots are always on the right foot regardless if hatch is opened or not
+
+### Mob of the Dead Specific
+- Afterlife will not down/kill the player if the bar depletes completely (similar to Beast in Shadows of Evil)
+- Added a modified version of the Cat has 9 Lives script
