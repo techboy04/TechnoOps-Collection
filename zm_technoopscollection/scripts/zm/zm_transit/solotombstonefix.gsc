@@ -3,6 +3,17 @@
 #include maps\mp\gametypes_zm\_hud_util;
 #include maps\mp\gametypes_zm\_hud_message;
 #include maps\mp\zombies\_zm_perks;
+#include maps\mp\zombies\_zm_sidequests;
+#include maps\mp\zm_transit_utility;
+#include maps\mp\zombies\_zm_spawner;
+#include maps\mp\gametypes_zm\_globallogic_score;
+#include maps\mp\zombies\_zm_stats;
+#include maps\mp\zombies\_zm_zonemgr;
+#include maps\mp\zombies\_zm_weapons;
+#include maps\mp\zombies\_zm_powerups;
+#include maps\mp\zombies\_zm_buildables;
+#include maps\mp\zombies\_zm_unitrigger;
+#include maps\mp\zombies\_zm_utility;
 
 main()
 {

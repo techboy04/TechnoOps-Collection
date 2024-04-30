@@ -4,6 +4,6 @@
 
 script,scripts/zm/main.gsc
 script,scripts/zm/zm_transit/solotombstonefix.gsc
-script,scripts/zm/zm_tomb/tomb.gsc
-script,scripts/zm/zm_prison/prison.gsc
 script,scripts/zm/zm_prison/9lives.gsc
+script,scripts/zm/zm_prison/newprison.gsc
+script,scripts/zm/zm_tomb/newtomb.gsc

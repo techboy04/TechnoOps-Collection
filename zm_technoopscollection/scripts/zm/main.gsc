@@ -257,7 +257,18 @@ init()
     {
     	level.perk_purchase_limit = getDvarInt("perk_limit");
     }
-    
+
+
+	if (getDvarInt("enable_fog") == 1)
+	{
+		setDvar( "r_fog", 1 );
+	}
+	else
+	{
+		setDvar( "r_fog", 0 );
+	}
+
+
     if (getDvarInt("enable_debug") == 1)
     {
     	level thread init_debug();
@@ -347,7 +358,9 @@ init_dvars()
     create_dvar("fasttravel_activateonpower", 0);
     
     create_dvar("enable_healthbar", 1);
-    
+
+	create_dvar("health_bar_look", 0);
+
     create_dvar("enable_zombiecount", 1);
     
     create_dvar("enable_exfil", 1);
@@ -367,7 +380,7 @@ init_dvars()
     create_dvar("enable_globalatm", 1);
     
     create_dvar("enable_origins_mud", 1);
-    
+	
     create_dvar("cinematic_mode", 0);
     
     create_dvar("hide_HUD", 0);
@@ -401,6 +414,16 @@ init_dvars()
 	create_dvar("use_customtimebetween", 0);
 	
 	create_dvar("timebetween_rounds", 10);
+	
+	create_dvar("wallweapon_in_town", 1);
+	
+	create_dvar("enable_recapturerounds", 0);
+	
+	create_dvar("enable_originsfootchanges", 1);
+	
+	create_dvar("enable_samanthaintro", 0);
+	
+	create_dvar("afterlife_doesnt_down", 1);
 }
 
 init_player_things()
@@ -455,7 +478,7 @@ init_player_things()
 		if (getDvarInt("enable_debug") == 1)
     		self thread player_debug();
     	
-    	self thread toggle_hud();
+//    	self thread toggle_hud();
 
     	if (getDvarInt("enable_hitmarker") == 1)
     		self thread player_hitmarker();
@@ -479,7 +502,7 @@ init_player_things()
 			self thread spawnIfRoundOne();
 			self thread spawnPlayerEarly();
 		}
-		
+
 		self iprintln("Loaded TechnoOps Collection - Have fun!");
 		wait 5;
 		self iprintln("Loaded " + level.modlist.size + " mods. Use .modlist to view the loaded mods");
@@ -3174,7 +3197,7 @@ enemycounter_hud()
 
 init_exfil()
 {
-    precacheshader("waypoint_revive");
+    precacheshader("waypoint_revive_zm");
     precacheshader("scorebar_zom_1");
     setExfillocation();
     if (level.radiomodel != "")
@@ -3207,10 +3230,10 @@ createExfilIcon()
     exfil_icon.x = level.iconlocation[ 0 ];
     exfil_icon.y = level.iconlocation[ 1 ];
 	exfil_icon.z = level.iconlocation[ 2 ] + 80;
-	exfil_icon.color = (0,0,1);
+	exfil_icon.color = (1,1,1);
     exfil_icon.isshown = 1;
     exfil_icon.archived = 0;
-    exfil_icon setshader( "waypoint_revive", 8, 8 );
+    exfil_icon setshader( "waypoint_revive_zm", 6, 6 );
     exfil_icon setwaypoint( 1 );
     
     while(1)
@@ -4196,19 +4219,31 @@ health_bar_hud()
 	health_bar.hidewheninmenu = 1;
 	health_bar.bar.hidewheninmenu = 1;
 	health_bar.barframe.hidewheninmenu = 1;
-	health_bar setpoint(undefined, "BOTTOM", 0, 0);
-	health_bar.color = (1,0,0);
-	health_bar.bar.color = (1,0.5,0.5);
 	health_bar.alpha = 1;
 
 	health_bar_text = self createprimaryprogressbartext();
-	health_bar_text setpoint(undefined, "BOTTOM", -85, 0);
 //	health_bar_text setpoint(undefined, "BOTTOM", -410, -70);
 	health_bar_text.hidewheninmenu = 1;
+//	health_bar_text.fontscale = 1;
+
+	if (getDvarInt("health_bar_look") == 0)
+	{
+		health_bar_text setpoint(undefined, "BOTTOM_LEFT", -40, -108);
+		health_bar setpoint(undefined, "BOTTOM_LEFT", 15, -93);
+		health_bar.color = (0,0,0);
+		health_bar.bar.color = (1,1,1);
+	}
+	else if (getDvarInt("health_bar_look") == 1)
+	{
+		health_bar_text setpoint(undefined, "BOTTOM", -85, 0);
+		health_bar setpoint(undefined, "BOTTOM", 0, 0);
+		health_bar.color = (1,0,0);
+		health_bar.bar.color = (1,0.5,0.5);
+	}
 
 	while (1)
 	{
-		if (isDefined(self.e_afterlife_corpse))
+		if (isDefined(self.e_afterlife_corpse) || ( isDefined( self.revivetrigger ) ))
 		{
 			if (health_bar.alpha != 0)
 			{
@@ -4224,9 +4259,10 @@ health_bar_hud()
 
 		if (health_bar.alpha != 1)
 		{
-			health_bar.bar.alpha = 1;
-			health_bar.barframe.alpha = 1;
-			health_bar_text.alpha = 1;
+				health_bar.alpha = 1;
+				health_bar.bar.alpha = 1;
+				health_bar.barframe.alpha = 1;
+				health_bar_text.alpha = 1;
 		}
 
 		health_bar updatebar(self.health / self.maxhealth);
@@ -5235,11 +5271,6 @@ init_transitmisc()
 		setDvar( "scr_screecher_ignore_player", 0 );
 	else
 		setDvar( "scr_screecher_ignore_player", 1 );
-		
-	if (getDvarInt("enable_fog") == 1)
-		setDvar( "r_fog", 1 );
-	else
-		setDvar( "r_fog", 0 );
 
 	level.skipstartcheck = 0;
 //	include_weapon( "jetgun_zm", 1 );
@@ -5255,6 +5286,15 @@ player_transitmisc()
 //	self maps/mp/zombies/_zm_equipment::equipment_give( "jetgun_zm" );
 	self thread jetgun_unlimitedammo();
 	self thread switch_jetgun_modes();
+	
+	if (getDvarInt("enable_fog") == 1)
+	{
+		self setClientDvar("r_fog", 1);
+	}
+	else
+	{
+		self setClientDvar("r_fog", 0);
+	}
 	
 }
 
@@ -9125,4 +9165,24 @@ treasure_chest_weapon_spawn_new( chest, player, respin )
 
     self.weapon_string = undefined;
     self notify( "box_spin_done" );
+}
+
+sortPlayerArray()
+{
+	self.finalArray = [];
+
+	foreach (player in level.players )
+	{
+		if (player != self)
+		{
+			self.finalArray[self.finalArray.size] = player;
+		}
+	}
+	return self.finalArray.size;
+}
+
+reworkedHUD()
+{
+	self setclientuivisibilityflag( "hud_visible", 0 );
+	self iprintln("Attempted to hide HUD");
 }
