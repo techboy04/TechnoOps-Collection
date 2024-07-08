@@ -21,7 +21,10 @@ hehe sorta fixed by Techie :)
 init()
 {
 	level.clientid = 0;
-	level thread onplayerconnect();
+	if (getDvarInt("gamemode") == 0)
+	{
+		level thread onplayerconnect();
+	}
 }
 
 onplayerconnect()

@@ -7471,7 +7471,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^22.3 - 7.2.2024");
+	self iprintln("^5Your Version: ^22.4 - 7.7.2024");
 }
 
 modslist_text()
