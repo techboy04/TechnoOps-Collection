@@ -541,7 +541,7 @@ init_dvars()
     
     create_dvar("enable_globalatm", 1);
     
-    create_dvar("enable_origins_mud", 1);
+    create_dvar("enable_origins_mud", 0);
 	
     create_dvar("cinematic_mode", 0);
     
@@ -7471,7 +7471,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^22.4 - 7.7.2024");
+	self iprintln("^5Your Version: ^22.5 - 7.19.2024");
 }
 
 modslist_text()
@@ -9841,6 +9841,8 @@ createlist()
 {
 	level.weaponlist = [];
 	
+	list = [];
+	
 	if(getDvar("mapname") == "zm_tomb")
 	{
 		starter = "c96_zm";
@@ -9852,7 +9854,7 @@ createlist()
 	
 	level.weaponlist[level.weaponlist.size] = starter;
 	
-	if (getDvarInt("gungame_ladder") == 1)
+	if (getDvarInt("gungame_ladder") == 1 || getDvarInt("gungame_ladder") == 3)
 	{
 		if ( maps\mp\zombies\_zm_weapons::can_upgrade_weapon( starter ) )
 		{
@@ -9864,17 +9866,24 @@ createlist()
 	{
 		if (isGun(guns.weapon_name))
 		{
-			level.weaponlist[level.weaponlist.size] = guns.weapon_name;
+			list[list.size] = guns.weapon_name;
 			
-			if (getDvarInt("gungame_ladder") == 1)
+			if (getDvarInt("gungame_ladder") == 1 || getDvarInt("gungame_ladder") == 3)
 			{
 				if ( maps\mp\zombies\_zm_weapons::can_upgrade_weapon( guns.weapon_name ) )
 				{
-					level.weaponlist[level.weaponlist.size] = maps\mp\zombies\_zm_weapons::get_upgrade_weapon( guns.weapon_name, false );
+					list[list.size] = maps\mp\zombies\_zm_weapons::get_upgrade_weapon( guns.weapon_name, false );
 				}
 			}
 		}
 	}
+	
+	if (getDvarInt("gungame_ladder") == 2 || getDvarInt("gungame_ladder") == 3)
+	{
+		list = array_randomize(list);
+	}
+	level.weaponlist = arraycombine(level.weaponlist, list, 1, 0);
+	
 }
 
 isGun(gun)
@@ -9900,7 +9909,12 @@ isGun(gun)
 
 changeweapon(demoted)
 {
-	self takeweapon(self getcurrentweapon());
+	primaries = self getweaponslistprimaries();
+	
+	foreach (weapon in primaries)
+	{
+		self takeweapon(weapon);
+	}
 	
 	if (self.weaponlevel >= (level.weaponlist.size - 1))
 	{
