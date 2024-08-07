@@ -50,3 +50,6 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 ### Mob of the Dead Specific
 - Afterlife will not down/kill the player if the bar depletes completely (similar to Beast in Shadows of Evil)
 - Added a modified version of the Cat has 9 Lives script
+
+### Nuketown Specific
+- Perks Modifier, be able to choose how the perks drop
