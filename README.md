@@ -19,6 +19,7 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 - Upgraded Perks
 - Global ATM
 - Infection
+- Obtainable Starter Pistol
 
 ### Lightweight
 - Health Bar
@@ -39,6 +40,8 @@ This mod is a collection of smaller mods made by me into one big script for Plut
 - Ladder in Town that leads to the road between Diner and Farm
 - EE step that requires overheat jetgun is skipped
 - Wall Weapon in Town
+- An extra hatch for Diner and Bus usage
+- A secret EE thats mod specific
 
 ### Origins Specific
 - Recapture rounds are removed
