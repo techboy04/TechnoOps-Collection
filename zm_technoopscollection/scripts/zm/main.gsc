@@ -24,6 +24,7 @@
 #include maps\mp\zombies\_zm_powerups;
 #include maps\mp\zombies\_zm_spawner;
 #include maps\mp\zombies\_zm_audio_announcer;
+#include maps\mp\zombies\_zm_blockers;
 
 main()
 {
@@ -45,6 +46,8 @@ main()
 	replacefunc(maps\mp\zombies\_zm_magicbox::treasure_chest_move, ::treasure_chest_move_new);
 	replacefunc(maps\mp\zombies\_zm_magicbox::treasure_chest_weapon_spawn, ::treasure_chest_weapon_spawn_new);
 	
+	replacefunc(maps\mp\zombies\_zm_blockers::blocker_trigger_think, ::blocker_trigger_think_new);
+	
 	if(getDvarInt("gamemode") == 0)
 	{
 		replacefunc(maps\mp\zombies\_zm::round_think, ::new_round_think);
@@ -57,28 +60,35 @@ main()
 		replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter, ::new_start_carpenter);
 		replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter_new, ::new_start_carpenter_new);
 		replacefunc(maps\mp\zombies\_zm_powerups::full_ammo_powerup, ::full_ammo_powerup_new);
+		
+		replacefunc(maps\mp\zombies\_zm::round_wait, ::round_wait_exfil);
 	}
 	else
 	{
-		replacefunc(maps\mp\zombies\_zm::round_wait, ::round_wait_minigame);
-		replacefunc(maps\mp\zombies\_zm::round_over, ::round_over_minigame);		
-
 		replacefunc(maps\mp\zombies\_zm_audio_announcer::init, ::init_audio_announcer);
 
-		replacefunc(maps\mp\zombies\_zm::end_game, ::end_game_minigame);
 		replacefunc(maps\mp\zombies\_zm::round_think, ::round_think_minigame);
-
-		replacefunc(maps\mp\zombies\_zm_powerups::init_powerups, ::init_powerups_minigame);
 		
-		if(getDvarInt("gamemode") == 1)
+		if(getDvarInt("gamemode") != 3)
+		{
+			replacefunc(maps\mp\zombies\_zm::round_wait, ::round_wait_minigame);
+			replacefunc(maps\mp\zombies\_zm::round_over, ::round_over_minigame);
+		}
+		
+		if(getDvarInt("gamemode") == 1 || getDvarInt("gamemode") == 3)
 		{
 			replacefunc(maps\mp\zombies\_zm_magicbox::treasure_chest_init, ::new_treasure_chest_init);
 			replacefunc(maps\mp\zombies\_zm_weapons::weapon_spawn_think, ::new_weapon_spawn_think);
-			replacefunc(maps\mp\zombies\_zm_perks::vending_weapon_upgrade, ::new_vending_weapon_upgrade);
+			if(getDvarInt("gamemode") == 1)
+			{
+				replacefunc(maps\mp\zombies\_zm_perks::vending_weapon_upgrade, ::new_vending_weapon_upgrade);
 	
-			replacefunc(maps\mp\zombies\_zm_laststand::auto_revive, ::auto_revive_gungame);
-			replacefunc(maps\mp\zombies\_zm::player_damage_override, ::player_damage_override_gungame);
-			replacefunc(maps\mp\zombies\_zm_powerups::powerup_grab, ::powerup_grab_gungame);
+				replacefunc(maps\mp\zombies\_zm_laststand::auto_revive, ::auto_revive_gungame);
+				replacefunc(maps\mp\zombies\_zm::player_damage_override, ::player_damage_override_gungame);
+				replacefunc(maps\mp\zombies\_zm_powerups::powerup_grab, ::powerup_grab_gungame);
+				replacefunc(maps\mp\zombies\_zm_powerups::init_powerups, ::init_powerups_minigame);
+				replacefunc(maps\mp\zombies\_zm::end_game, ::end_game_minigame);
+			}
 		}
 	}
 
@@ -113,7 +123,10 @@ init()
 
 	if( getDvarInt("gamemode") != 0)
 	{
-		init_gamemode_powerups();
+		if (getDvarInt("gamemode") != 3)
+		{
+			init_gamemode_powerups();
+		}
 		level.perk_purchase_limit = 9;
 		level.playersready = 0;
 		if(getDvarInt("gamemode") == 1)
@@ -153,6 +166,15 @@ init()
 				}
 			}
 			level thread introHUD();
+		}
+		else if(getDvarInt("gamemode") == 3)
+		{
+			level.perk_purchase_limit = 9;
+			level thread createMysterylist();
+			level.playersready = 0;
+			level.mysterygunsstarted = 0;
+			level thread roll_weapon_on_round_over();
+			level thread introHUD();			
 		}
 		if (getDvarInt("gamemode") == 2)
 		{
@@ -451,7 +473,7 @@ onPlayerSpawned()
 			self.lives = 999;
 			self.timerpaused = 0;
 
-			if (level.gungamestarted == 0 || level.crankedstarted == 0)
+			if (level.gungamestarted == 0 || level.crankedstarted == 0 || level.mysterygunsstarted == 0)
 			{
 				self EnableInvulnerability();
 				self thread wait_for_ready_input();
@@ -588,6 +610,8 @@ init_dvars()
 	create_dvar("enable_samanthaintro", 0);
 	
 	create_dvar("afterlife_doesnt_down", 1);
+	
+	create_dvar("nuketown_perks_mode", 2);
 }
 
 init_player_things()
@@ -3440,6 +3464,8 @@ createExfilIcon()
     		exfil_icon.x = level.exfillocation[ 0 ];
     		exfil_icon.y = level.exfillocation[ 1 ];
  			exfil_icon.z = level.exfillocation[ 2 ] + 80;
+			exfil_icon setshader( "waypoint_revive_zm", 0, 0 );
+			exfil_icon setwaypoint( 1, "waypoint_revive_zm", 1 );
     	}
     	else if (level.canexfil == 0 && level.exfilstarted == 0)
     	{
@@ -3626,7 +3652,7 @@ startCountdown(numtoset)
 
 exfilHUD()
 {
-	level endon("end_game");
+//	level endon("end_game");
 	self endon( "disconnect" );
 
 	exfil_bg = newClientHudElem(self);
@@ -3656,7 +3682,7 @@ exfilHUD()
 	exfil_text.color = ( 1, 1, 1 );
 	exfil_text.hidewheninmenu = 1;
 	exfil_text.foreground = 1;
-	exfil_text.label = &"Exfil Timer: ^6";
+	exfil_text.label = &"Exfil Timer: ^2";
 	
 	exfil_target = newClientHudElem(self);
 	exfil_target.alignx = "left";
@@ -3670,16 +3696,35 @@ exfilHUD()
 	exfil_target.color = ( 1, 1, 1 );
 	exfil_target.hidewheninmenu = 1;
 	exfil_target.foreground = 1;
-	exfil_target settext ("Go to the ^6" + level.escapezone);
+	exfil_target settext ("Go to the ^2" + level.escapezone);
+	
+	exfil_kills = newClientHudElem(self);
+	exfil_kills.alignx = "left";
+	exfil_kills.aligny = "middle";
+	exfil_kills.horzalign = "user_left";
+	exfil_kills.vertalign = "user_center";
+	exfil_kills.x += 20;
+	exfil_kills.y -= 5;
+	exfil_kills.fontscale = 1;
+	exfil_kills.alpha = 0;
+	exfil_kills.color = ( 1, 1, 1 );
+	exfil_kills.hidewheninmenu = 1;
+	exfil_kills.foreground = 1;
+	exfil_kills.label = &"Zombie Kills Left: ^2";
+	
+	thread activateTimer(exfil_text);
 	
 	while(1)
 	{
+		exfil_kills setValue (get_round_enemy_array().size + level.zombie_total);
 		if ((level.exfilstarted == 1) && (level.gameisending == 0))
 		{
 			exfil_bg.alpha = 1;
-			exfil_target.alpha = 1;
+			exfil_target.alpha = 0;
 			exfil_text.alpha = 1;
-			exfil_text setValue (level.timer);
+			exfil_kills.alpha = 1;
+//			exfil_text setValue (level.timer);
+//			exfil_text setTimer(level.timer);
 			exfil_target setValue (level.escapezone);
 			if ( distance( level.exfillocation, self.origin ) <= 300 )
 			{
@@ -3690,16 +3735,29 @@ exfilHUD()
 				exfil_bg.color = ( 0, 0, 1 );
 			}
 			
+			if(get_round_enemy_array().size + level.zombie_total == 0)
+			{
+				exfil_target.alpha = 1;
+				exfil_kills.alpha = 0;
+			}
+			
 		}
 		else
 		{
 			exfil_bg.alpha = 0;
 			exfil_target.alpha = 0;
 			exfil_text.alpha = 0;
+			exfil_kills.alpha = 0;
 		}
 		
 		wait 0.5;
 	}
+}
+
+activateTimer(hud)
+{
+	level waittill("exfil_started");
+	hud setTimer(120);
 }
 
 setExfillocation()
@@ -3733,7 +3791,7 @@ setExfillocation()
 			level.radiomodel = ("");
 			level.radioangle = (0,0,0);
 			level.exfillocation = (-581,375,80);
-			level.starttimer = 30;
+			level.starttimer = 120;
 			level.requirezombiekills = 0;
 		}
 		else if(getDvar("mapname") == "zm_transit") //transit grief and survival
@@ -3745,7 +3803,7 @@ setExfillocation()
 				level.radiomodel = ("");
 				level.radioangle = (0,0,0);
 				level.exfillocation = (744,-1456,128);
-				level.starttimer = 30;
+				level.starttimer = 120;
 				level.requirezombiekills = 1;
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "transit") //busdepot
@@ -3755,7 +3813,7 @@ setExfillocation()
 				level.radiomodel = ("");
 				level.radioangle = (0,126,0);
 				level.exfillocation = (-7388,4239,-63);
-				level.starttimer = 30;
+				level.starttimer = 120;
 				level.requirezombiekills = 1;
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "farm") //farm
@@ -3765,7 +3823,7 @@ setExfillocation()
 				level.radiomodel = ("");
 				level.radioangle = (0,0,0);
 				level.exfillocation = (8111,-4787,48);
-				level.starttimer = 30;
+				level.starttimer = 120;
 				level.requirezombiekills = 1;
 			}
 		}
@@ -3829,13 +3887,27 @@ setExfillocation()
 spawnExit()
 {
 	exfilExit = spawn( "trigger_radius", (level.exfillocation), 10, 200, 200 );
-	exfilExit setHintString("^7Press ^3&&1 ^7escape");
+	exfilExit setHintString("^7Kill all the Zombies");
 	exfilExit setcursorhint( "HINT_NOICON" );
+	
+	foreach (player in get_players())
+	{
+		player show_big_message("Kill all the Zombies to open the portal!", "");
+	}
+	
+	waitTillNoZombies();
+	
+	foreach (player in get_players())
+	{
+		player show_big_message("All Enemies Eliminated! You can now Escape!", "");
+	}
+	
+	exfilExit setHintString("^7Press ^3&&1 ^7escape");
 	
 	while(1)
 	{
 		exfilExit waittill( "trigger", i );
-		if ( i usebuttonpressed() )
+		if ( i usebuttonpressed())
 		{
 			i enableinvulnerability();
 			level.successfulexfil = 1;
@@ -3858,8 +3930,7 @@ spawnExit()
 			i disableinvulnerability();
 			if (level.players.size == 1)
 			{
-				foreach ( player in get_players() )
-					player thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
+				level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
 				level notify( "end_game" );
 			}
 			else
@@ -3870,14 +3941,12 @@ spawnExit()
 				escapetransition destroy();
 				if (checkAmountPlayers())
 				{
-					foreach ( player in get_players() )
-						player thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
+					level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
 					level notify( "end_game" );
 				}
 				else
 				{
-					foreach ( player in get_players() )
-						player thread sendsubtitletext(chooseAnnouncer(), 1, i + " has escaped!", 2);
+					level thread sendsubtitletext(chooseAnnouncer(), 1, i + " has escaped!", 2);
 				}
 				
 			}
@@ -3885,6 +3954,14 @@ spawnExit()
 			exfilExit setHintString("");
 		}
 	
+	}
+}
+
+waitTillNoZombies()
+{
+	while(get_round_enemy_array().size + level.zombie_total > 0)
+	{
+		wait 0.1;
 	}
 }
 
@@ -3965,14 +4042,7 @@ showscoreboardtext()
 
 fixZombieTotal()
 {
-	while(1)
-		{
-			if (level.exfilstarted == 1)
-			{
-				level.zombie_total = 20;
-			}
-			wait(1);
-		}
+	level.zombie_total = 40;
 }
 
 showExfilMessage()
@@ -7471,7 +7541,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^22.5 - 7.19.2024");
+	self iprintln("^5Your Version: ^22.6 - 8.6.2024");
 }
 
 modslist_text()
@@ -10512,7 +10582,7 @@ end_game_minigame()
 
 round_think_minigame( restart )
 {
-	if(level.gungamestarted == 0 || level.crankedstarted == 0)
+	if(level.gungamestarted == 0 || level.crankedstarted == 0 || level.mysterygunsstarted == 0)
 	{
 		level waittill ("end");
 	}
@@ -10605,7 +10675,10 @@ round_think_minigame( restart )
         [[ level.round_wait_func ]]();
         level.first_round = 0;
         level notify( "end_of_round" );
-//        level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_end" );
+		if (getDvarInt("gamemode") == 3)
+		{
+			level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_end" );
+		}
 		level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_start" );
         uploadstats();
 
@@ -10688,6 +10761,10 @@ wait_for_ready_input()
 					else if (getDvarInt("gamemode") == 2)
 					{
 						level.crankedstarted = 1;					
+					}
+					else if (getDvarInt("gamemode") == 3)
+					{
+						level.mysterygunsstarted = 1;
 					}
 					level thread minigames_timer_hud();
 					foreach (player in level.players)
@@ -11238,6 +11315,10 @@ startHUDMessage()
 	{
 		hud2 settext("Cranked");
 	}
+	else if (getDvarInt("gamemode") == 3)
+	{
+		hud2 settext("Mystery Guns");
+	}
 	hud2.fontscale = 8;
 	hud2 changefontscaleovertime( 1 );
     hud2 fadeovertime( 1 );
@@ -11265,6 +11346,10 @@ startHUDMessage()
 	else if (getDvarInt("gamemode") == 2)
 	{
 		hud3 settext("Get kills to reset the timer, when timer reaches zero, youre eliminated!");
+	}
+	else if (getDvarInt("gamemode") == 3)
+	{
+		hud3 settext("Weapons roll after each round. If weapon is upgraded, the next will be upgraded aswell.");
 	}
 	hud3.fontscale = 2;
 	hud3 changefontscaleovertime( 1 );
@@ -11743,4 +11828,307 @@ notify_next_tier_end()
 	self endon("disonnect");
 	self endon("end_next_tier");
 	self notify("end_next_tier");
+}
+
+////////////////////////
+//
+//	Mystery Guns
+//
+///////////////////////
+
+createMysterylist()
+{
+	level.weaponlist = [];
+	
+	foreach (guns in level.zombie_weapons)
+	{
+		if (isGun(guns.weapon_name))
+		{
+			level.weaponlist[level.weaponlist.size] = guns.weapon_name;
+		}
+	}
+}
+
+changemysteryweapon()
+{
+	if (isDefined(self.e_afterlife_corpse))
+	{
+		self waittill( "player_revived" );
+		wait 1.5;
+	}
+	
+	shouldupgrade = maps\mp\zombies\_zm_weapons::can_upgrade_weapon( self getcurrentweapon() );
+	
+	primaries = self getweaponslistprimaries();
+	
+	foreach (weapon in primaries)
+	{
+		self takeweapon(weapon);
+	}
+	
+	gun = rollgun();
+	
+	if (shouldupgrade)
+	{
+		self weapon_give( gun, 0, 0, 1 );
+	}
+	else
+	{
+		upgradedgun = maps\mp\zombies\_zm_weapons::get_upgrade_weapon( gun, false );
+		
+		self weapon_give( upgradedgun, 0, 0, 1 );
+	}
+}
+
+rollgun()
+{
+	rand = random(level.weaponlist);
+	
+	return rand;
+}
+
+roll_weapon_on_round_over()
+{
+	for(;;)
+	{
+		level waittill( "between_round_over" );
+		foreach (player in get_players())
+		{
+			player changeMysteryweapon();
+		}
+	}
+}
+
+round_wait_exfil()
+{
+    level endon( "restart_round" );
+/#
+    if ( getdvarint( #"zombie_rise_test" ) )
+        level waittill( "forever" );
+#/
+/#
+    if ( getdvarint( #"zombie_cheat" ) == 2 || getdvarint( #"zombie_cheat" ) >= 4 )
+        level waittill( "forever" );
+#/
+    wait 1;
+
+    if ( flag( "dog_round" ) )
+    {
+        wait 7;
+
+        while ( level.dog_intermission )
+            wait 0.5;
+
+        increment_dog_round_stat( "finished" );
+    }
+    else
+    {
+        while ( true )
+        {
+            should_wait = 0;
+
+			if (level.exfilstarted == 0)
+			{
+				if ( isdefined( level.is_ghost_round_started ) && [[ level.is_ghost_round_started ]]() )
+					should_wait = 1;
+				else
+					should_wait = get_current_zombie_count() > 0 || level.zombie_total > 0 || level.intermission;
+
+				if ( !should_wait )
+					return;
+
+				if ( flag( "end_round_wait" ) )
+					return;
+			}
+
+            wait 1.0;
+        }
+    }
+}
+
+do_post_chunk_repair_delay_new( player )
+{
+	if (player hasperk("specialty_rof") && getDvarInt("enable_upgradedperks") == 1)
+	{
+		wait 0.1;
+	}
+	else
+	{
+		wait 1;
+	}
+}
+
+blocker_trigger_think_new()
+{
+    self endon( "blocker_hacked" );
+
+    if ( isdefined( level.no_board_repair ) && level.no_board_repair )
+        return;
+
+/#
+    println( "ZM >> TRIGGER blocker_trigger_think " );
+#/
+    level endon( "stop_blocker_think" );
+    cost = 10;
+
+    if ( isdefined( self.zombie_cost ) )
+        cost = self.zombie_cost;
+
+    original_cost = cost;
+
+    if ( !isdefined( self.unitrigger_stub ) )
+    {
+        radius = 94.21;
+        height = 94.21;
+
+        if ( isdefined( self.trigger_location ) )
+            trigger_location = self.trigger_location;
+        else
+            trigger_location = self;
+
+        if ( isdefined( trigger_location.radius ) )
+            radius = trigger_location.radius;
+
+        if ( isdefined( trigger_location.height ) )
+            height = trigger_location.height;
+
+        trigger_pos = groundpos( trigger_location.origin ) + vectorscale( ( 0, 0, 1 ), 4.0 );
+        self.unitrigger_stub = spawnstruct();
+        self.unitrigger_stub.origin = trigger_pos;
+        self.unitrigger_stub.radius = radius;
+        self.unitrigger_stub.height = height;
+        self.unitrigger_stub.script_unitrigger_type = "unitrigger_radius";
+        self.unitrigger_stub.hint_string = get_hint_string( self, "default_reward_barrier_piece" );
+        self.unitrigger_stub.cursor_hint = "HINT_NOICON";
+        self.unitrigger_stub.trigger_target = self;
+        maps\mp\zombies\_zm_unitrigger::register_static_unitrigger( self.unitrigger_stub, ::blocker_unitrigger_think );
+        maps\mp\zombies\_zm_unitrigger::unregister_unitrigger( self.unitrigger_stub );
+
+        if ( !isdefined( trigger_location.angles ) )
+            trigger_location.angles = ( 0, 0, 0 );
+
+        self.unitrigger_stub.origin = groundpos( trigger_location.origin ) + vectorscale( ( 0, 0, 1 ), 4.0 ) + anglestoforward( trigger_location.angles ) * -11;
+    }
+
+    self thread trigger_delete_on_repair();
+    thread maps\mp\zombies\_zm_unitrigger::register_static_unitrigger( self.unitrigger_stub, ::blocker_unitrigger_think );
+/#
+    if ( getdvarint( #"zombie_debug" ) > 0 )
+        thread debug_blocker( trigger_pos, radius, height );
+#/
+
+    while ( true )
+    {
+        self waittill( "trigger", player );
+        has_perk = player has_blocker_affecting_perk();
+
+        if ( all_chunks_intact( self, self.barrier_chunks ) )
+        {
+            self notify( "all_boards_repaired" );
+            return;
+        }
+
+        if ( no_valid_repairable_boards( self, self.barrier_chunks ) )
+        {
+            self notify( "no valid boards" );
+            return;
+        }
+
+        if ( isdefined( level._zm_blocker_trigger_think_return_override ) )
+        {
+            if ( self [[ level._zm_blocker_trigger_think_return_override ]]( player ) )
+                return;
+        }
+
+        while ( true )
+        {
+            players = get_players();
+
+            if ( player_fails_blocker_repair_trigger_preamble( player, players, self.unitrigger_stub.trigger, 0 ) )
+                break;
+
+            if ( isdefined( self.zbarrier ) )
+            {
+                chunk = get_random_destroyed_chunk( self, self.barrier_chunks );
+                self thread replace_chunk( self, chunk, has_perk, isdefined( player.pers_upgrades_awarded["board"] ) && player.pers_upgrades_awarded["board"] );
+            }
+            else
+            {
+                chunk = get_random_destroyed_chunk( self, self.barrier_chunks );
+
+                if ( isdefined( chunk.script_parameter ) && chunk.script_parameters == "repair_board" || chunk.script_parameters == "barricade_vents" )
+                {
+                    if ( isdefined( chunk.unbroken_section ) )
+                    {
+                        chunk show();
+                        chunk solid();
+                        chunk.unbroken_section self_delete();
+                    }
+                }
+                else
+                    chunk show();
+
+                if ( !isdefined( chunk.script_parameters ) || chunk.script_parameters == "board" || chunk.script_parameters == "repair_board" || chunk.script_parameters == "barricade_vents" )
+                {
+                    if ( !( isdefined( level.use_clientside_board_fx ) && level.use_clientside_board_fx ) )
+                    {
+                        if ( !isdefined( chunk.material ) || isdefined( chunk.material ) && chunk.material != "rock" )
+                            chunk play_sound_on_ent( "rebuild_barrier_piece" );
+
+                        playsoundatposition( "zmb_cha_ching", ( 0, 0, 0 ) );
+                    }
+                }
+
+                if ( chunk.script_parameters == "bar" )
+                {
+                    chunk play_sound_on_ent( "rebuild_barrier_piece" );
+                    playsoundatposition( "zmb_cha_ching", ( 0, 0, 0 ) );
+                }
+
+                if ( isdefined( chunk.script_parameters ) )
+                {
+                    if ( chunk.script_parameters == "bar" )
+                    {
+                        if ( isdefined( chunk.script_noteworthy ) )
+                        {
+                            if ( chunk.script_noteworthy == "5" )
+                                chunk hide();
+                            else if ( chunk.script_noteworthy == "3" )
+                                chunk hide();
+                        }
+                    }
+                }
+
+                self thread replace_chunk( self, chunk, has_perk, isdefined( player.pers_upgrades_awarded["board"] ) && player.pers_upgrades_awarded["board"] );
+            }
+
+            if ( isdefined( self.clip ) )
+            {
+                self.clip enable_trigger();
+                self.clip disconnectpaths();
+            }
+            else
+                blocker_disconnect_paths( self.neg_start, self.neg_end );
+
+            bbprint( "zombie_uses", "playername %s playerscore %d round %d cost %d name %s x %f y %f z %f type %s", player.name, player.score, level.round_number, original_cost, self.target, self.origin, "repair" );
+            self do_post_chunk_repair_delay_new(player);
+
+            if ( !is_player_valid( player ) )
+                break;
+
+            player handle_post_board_repair_rewards( cost, self );
+
+            if ( all_chunks_intact( self, self.barrier_chunks ) )
+            {
+                self notify( "all_boards_repaired" );
+                return;
+            }
+
+            if ( no_valid_repairable_boards( self, self.barrier_chunks ) )
+            {
+                self notify( "no valid boards" );
+                return;
+            }
+        }
+    }
 }

@@ -25,10 +25,13 @@ main()
 	{
 		replacefunc(maps\mp\zombies\_zm_ai_brutus::wait_on_box_alarm, ::wait_on_box_alarm_new);
 		replacefunc(maps\mp\zombies\_zm_ai_brutus::get_best_brutus_spawn_pos, ::get_best_brutus_spawn_pos_new);
-		replacefunc(maps\mp\zm_prison::alcatraz_afterlife_doors, ::alcatraz_afterlife_doors_new);
 		replacefunc(maps\mp\zm_alcatraz_classic::fake_kill_player, ::fake_kill_player_new);
-		replacefunc(maps\mp\zombies\_zm_afterlife::init, ::init_afterlife);
-		replacefunc(maps\mp\zm_alcatraz_classic::power_on_perk_machines, ::power_on_perk_machines_new);
+		if(getDvarInt("gamemode") != 3)
+		{
+			replacefunc(maps\mp\zm_prison::alcatraz_afterlife_doors, ::alcatraz_afterlife_doors_new);
+			replacefunc(maps\mp\zombies\_zm_afterlife::init, ::init_afterlife);
+			replacefunc(maps\mp\zm_alcatraz_classic::power_on_perk_machines, ::power_on_perk_machines_new);
+		}
 	}
 }
 
