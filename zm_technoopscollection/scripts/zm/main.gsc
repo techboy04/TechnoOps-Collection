@@ -61,6 +61,8 @@ main()
 		replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter_new, ::new_start_carpenter_new);
 		replacefunc(maps\mp\zombies\_zm_powerups::full_ammo_powerup, ::full_ammo_powerup_new);
 		
+		replacefunc(maps\mp\zombies\_zm_power::change_power, ::change_power_new);
+		
 		replacefunc(maps\mp\zombies\_zm::round_wait, ::round_wait_exfil);
 	}
 	else
@@ -509,7 +511,7 @@ init_dvars()
 	create_dvar("enable_rampage", 1);
 	create_dvar("rampage_max_round", 20);
 	//Compass
-	create_dvar( "enable_compass", 0);
+	create_dvar( "enable_compass", 1);
     create_dvar( "enable_direction", 1 );
     create_dvar( "enable_zone", 1 );
     create_dvar( "enable_angle", 1 );
@@ -527,6 +529,9 @@ init_dvars()
 	create_dvar("enable_transitpower", 1);
 	//Transit Misc
 	create_dvar("enable_transitmisc", 1);
+	
+	create_dvar("tranzit_place_dinerhatch", 1);
+	create_dvar("tranzit_tedd_tracker", 1);
 	
 	create_dvar("enable_lavadamage", 0);
 	
@@ -612,6 +617,8 @@ init_dvars()
 	create_dvar("afterlife_doesnt_down", 1);
 	
 	create_dvar("nuketown_perks_mode", 2);
+	
+	create_dvar("power_activates_buildables", 1);
 }
 
 init_player_things()
@@ -12131,4 +12138,15 @@ blocker_trigger_think_new()
             }
         }
     }
+}
+
+change_power_new( delta, origin, radius )
+{
+    if ( !self.power )
+    {
+        self.power = 1;
+        self [[ self.power_on_func ]]( origin, radius );
+    }
+
+    self.powered_count++;
 }

@@ -27,7 +27,7 @@
 
 main()
 {
-	if (getDvarInt("enable_recapturerounds") == 1)
+	if (getDvarInt("enable_recapturerounds") == 0)
 	{
 		replacefunc(maps\mp\zm_tomb_capture_zones::recapture_round_start, ::recapture_round_start_new);
 	}
@@ -36,7 +36,7 @@ main()
 	{
 		replacefunc(maps\mp\zm_tomb_giant_robot::giant_robot_start_walk, ::giant_robot_start_walk_new);
 	}
-	if (getDvarInt("enable_samanthaintro") == 1)
+	if (getDvarInt("enable_samanthaintro") == 0)
 	{
 		replacefunc(maps\mp\zm_tomb_vo::start_samantha_intro_vo, ::start_samantha_intro_vo_new);
 	}
