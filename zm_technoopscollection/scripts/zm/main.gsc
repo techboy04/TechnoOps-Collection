@@ -7548,7 +7548,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^22.6 - 8.6.2024");
+	self iprintln("^5Your Version: ^22.7 - 8.21.2024");
 }
 
 modslist_text()
@@ -9699,6 +9699,7 @@ kill_on_downed()
 	{
 		self waittill ("player_downed");
 		self thread bleed_out();
+		self.isEliminated = 1;
 		
 		foreach (player in level.players)
 		{
@@ -9715,15 +9716,16 @@ kill_on_downed()
 
 if_all_players_eliminated()
 {
-	foreach (player in get_players())
+	count = 0;
+	foreach (player in level.players)
 	{
-		if (self.sessionstate == "spectator")
+		if (player.isEliminated != 1)
 		{
 			count += 1;
 		}
 	}
 	
-	if (count == level.players.size)
+	if (count == 1)
 	{
 		return true;
 	}
@@ -10018,7 +10020,8 @@ changeweapon(demoted)
 		self playsound ("zmb_cha_ching");
 	}
 	
-	self weapon_give( level.weaponlist[self.weaponlevel], 0, 0, 1 );
+	self GiveWeapon(level.weaponlist[self.weaponlevel]);
+	self SetSpawnWeapon(level.weaponlist[self.weaponlevel]);
 }
 
 gungameHUD()
@@ -10391,7 +10394,10 @@ end_game_minigame()
 {
     level waittill( "end_game" );
 	
-	level.winner = get_remaining_player().name;
+	if(getDvarInt("gamemode") == 2)
+	{
+		level.winner = get_remaining_player().name;
+	}
 	
     check_end_game_intermission_delay();
 /#
@@ -10702,8 +10708,8 @@ round_think_minigame( restart )
 				level thread spectators_respawn();
 			}
         }
-        else if ( 1 != players.size )
-            level thread spectators_respawn();
+//        else if ( 1 != players.size )
+//            level thread spectators_respawn();
 
         players = get_players();
         array_thread( players, maps\mp\zombies\_zm_pers_upgrades_system::round_end );
@@ -10748,10 +10754,13 @@ wait_for_ready_input()
 {
 	level endon ("end");
 	level.introHUD setText ("Press [{+melee}] and [{+speed_throw}] to ready up!: ^5" + level.playersready + "/" + level.players.size);
-	self waittill ("can_readyup");
+	if (!isDefined(self.bot))
+	{
+		self waittill ("can_readyup");
+	}
 	while(1)
 	{
-		if(self meleebuttonpressed() && self adsbuttonpressed())
+		if((self meleebuttonpressed() && self adsbuttonpressed()) || (isDefined(self.bot)))
 		{
 			if (self.voted == 0)
 			{
@@ -10808,7 +10817,7 @@ introHUD()
 
 playerScoresHUD(index, ref)
 {
-	y = (index * 20) + -60;
+	y = (index * 24) + -120;
 	
 	namebg = newhudelem();;
 	namebg.alignx = "left";

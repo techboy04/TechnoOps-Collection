@@ -16,11 +16,21 @@
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\zm_transit_classic;
 #include maps\mp\zm_transit_buildables;
+#include maps\mp\_visionset_mgr;
+#include maps\mp\zombies\_zm_ai_avogadro;
+#include maps\mp\zm_transit_bus;
+#include maps\mp\zombies\_zm_ai_basic;
+#include maps\mp\zm_tranzit;
+#include scripts\zm\main;
+
 
 main()
 {
 	replacefunc(maps\mp\zm_transit_utility::solo_tombstone_removal, ::solo_tombstone_removal_new);
+	replaceFunc(maps\mp\zombies\_zm_ai_avogadro::cloud_update_fx, ::custom_cloud_update_fx);
 	replacefunc(maps\mp\zm_transit_sq::richtofen_sidequest_a, ::richtofen_sidequest_a_new);
+	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
+	replacefunc(maps\mp\zm_transit::assign_lowest_unused_character_index, ::assign_lowest_unused_character_index);
 
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)
 	{
@@ -39,10 +49,23 @@ main()
 
 init()
 {
-	if(getDvarInt("tranzit_tedd_tracker") == 1)
+	if(getDvar("mapname") == "zm_transit")
 	{
-		level thread TEDDTrackerHUD();
+		if(getDvar("g_gametype") == "zclassic")
+		{
+			if(getDvarInt("tranzit_tedd_tracker") == 1)
+			{
+				level thread TEDDTrackerHUD();
+			}
+		}
 	}
+	
+	if( getPlayers() <= 1 )
+	{
+		replaceFunc(maps\mp\zm_transit_sq::get_how_many_progressed_from, ::custom_get_how_many_progressed_from);
+		replaceFunc(maps\mp\zm_transit_sq::maxis_sidequest_b, ::custom_maxis_sidequest_b);
+	}
+	
 }
 
 onPlayerConnect()
@@ -109,6 +132,75 @@ richtofen_sidequest_a_new()
     update_sidequest_stats( "sq_transit_rich_stage_2" );
     level thread richtofen_sidequest_complete_check( "A_complete" );
     level.sq_progress["rich"]["A_jetgun_tower"] = 1;
+}
+
+custom_get_how_many_progressed_from( story, a, b )
+{
+	if ( isDefined( level.sq_progress[ story ][ a ] ) || isDefined( level.sq_progress[ story ][ b ] ) )
+	{
+		return 2;
+	}
+	return 0;
+}
+
+custom_maxis_sidequest_b()
+{
+	level endon( "power_on" );
+	while ( 1 )
+	{
+		level waittill( "stun_avogadro", avogadro );
+		if ( isDefined( level.sq_progress[ "maxis" ][ "A_turbine_1" ] ) && is_true( level.sq_progress[ "maxis" ][ "A_turbine_1" ].powered ) )
+		{
+			if ( isDefined( avogadro ) && avogadro istouching( level.sq_volume ) )
+			{
+				level notify( "end_avogadro_turbines" );
+				break;
+			}
+		}
+		else
+		{
+		}
+	}
+	level notify( "maxis_stage_b" );
+	level thread maxissay( "vox_maxi_avogadro_emp_0", ( 7737, -416, -142 ) );
+	update_sidequest_stats( "sq_transit_maxis_stage_3" );
+	player = get_players();
+	player[ 0 ] setclientfield( "sq_tower_sparks", 1 );
+	player[ 0 ] setclientfield( "screecher_maxis_lights", 1 );
+	level thread maxis_sidequest_complete_check( "B_complete" );
+}
+
+maxis_sidequest_complete_new()
+{
+    turbinescriptnoteworthy1 = undefined;
+    turbinescriptnoteworthy2 = undefined;
+
+    if ( isdefined( level.sq_progress["maxis"]["C_screecher_1"] ) && isdefined( level.sq_progress["maxis"]["C_screecher_1"].script_noteworthy ) )
+        turbinescriptnoteworthy1 = level.sq_progress["maxis"]["C_screecher_1"].script_noteworthy;
+
+    if ( isdefined( level.sq_progress["maxis"]["C_screecher_2"] ) && isdefined( level.sq_progress["maxis"]["C_screecher_2"].script_noteworthy ) )
+        turbinescriptnoteworthy2 = level.sq_progress["maxis"]["C_screecher_2"].script_noteworthy;
+
+    update_sidequest_stats( "sq_transit_maxis_complete" );
+    level sidequest_complete( "maxis" );
+    level.sq_progress["maxis"]["FINISHED"] = 1;
+    level.maxcompleted = 1;
+    clientnotify( "sq_kfx" );
+
+    if ( isdefined( level.richcompleted ) && level.richcompleted )
+        level clientnotify( "sq_krt" );
+
+    wait 1;
+    clientnotify( "sqm" );
+    wait 1;
+    level set_screecher_zone_origin( turbinescriptnoteworthy1 );
+    wait 1;
+    clientnotify( "sq_max" );
+    wait 1;
+    level set_screecher_zone_origin( turbinescriptnoteworthy2 );
+    wait 1;
+    clientnotify( "sq_max" );
+    level thread droppowerup( "maxis" );
 }
 
 diner_hatch_access_new()
@@ -354,4 +446,121 @@ startelectrictrapdeploy_new( weapon )
 
         self notify( "etrap_cleanup" );
     }
+}
+
+custom_cloud_update_fx()
+{
+	self endon( "cloud_fx_end" );
+	level endon( "end_game" );
+	region = [];
+	region[ 0 ] = "cornfield";
+	self.current_region = undefined;
+	if ( !isDefined( self.sndent ) )
+	{
+		self.sndent = spawn( "script_origin", ( 0, 0, 1 ) );
+		self.sndent playloopsound( "zmb_avogadro_thunder_overhead" );
+	}
+	cloud_time = getTime();
+	vo_counter = 0;
+	while ( 1 )
+	{
+		if ( getTime() >= cloud_time )
+		{
+			if ( isDefined( self.current_region ) )
+			{
+				exploder_num = level.transit_region[ self.current_region ].exploder;
+				stop_exploder( exploder_num );
+			}
+			rand_region = array_randomize( region );
+			region_str = rand_region[ 0 ];
+			if ( !isDefined( self.current_region ) )
+			{
+				region_str = region[ 0 ];
+			}
+			idx = 0;
+			if ( idx >= 0 )
+			{
+				region_str = region[ idx ];
+			}
+			avogadro_print( "clouds in region " + region_str );
+			self.current_region = region_str;
+			exploder_num = level.transit_region[ region_str ].exploder;
+			exploder( exploder_num );
+			self.sndent moveto( level.transit_region[ region_str ].sndorigin, 3 );
+			cloud_time = getTime() + 30000;
+		}
+		if ( vo_counter > 50 )
+		{
+			player = self get_player_in_region();
+			if ( isDefined( player ) )
+			{
+				if ( isDefined( self._in_cloud ) && self._in_cloud )
+				{
+					player thread do_player_general_vox( "general", "avogadro_above", 90, 10 );
+				}
+				else
+				{
+					player thread do_player_general_vox( "general", "avogadro_arrive", 60, 40 );
+				}
+			}
+			else
+			{
+				level thread avogadro_storm_vox();
+			}
+			vo_counter = 0;
+		}
+		wait 0.1;
+		vo_counter++;
+	}
+}
+
+assign_lowest_unused_character_index()
+{
+    charindexarray = [];
+    charindexarray[0] = 0;
+    charindexarray[1] = 1;
+    charindexarray[2] = 2;
+    charindexarray[3] = 3;
+    players = get_players();
+
+    if ( players.size == 1 )
+    {
+        return 1;
+    }
+    else if ( players.size == 2 )
+    {
+        foreach ( player in players )
+        {
+            if ( isdefined( player.characterindex ) )
+            {
+                if ( player.characterindex == 2 || player.characterindex == 0 )
+                {
+                    if ( randomint( 100 ) > 50 )
+                        return 1;
+
+                    return 3;
+                }
+                else if ( player.characterindex == 3 || player.characterindex == 1 )
+                {
+                    if ( randomint( 100 ) > 50 )
+                        return 0;
+
+                    return 2;
+                }
+            }
+        }
+    }
+    else
+    {
+        foreach ( player in players )
+        {
+            if ( isdefined( player.characterindex ) )
+                arrayremovevalue( charindexarray, player.characterindex, 0 );
+        }
+
+        if ( charindexarray.size > 0 )
+            return charindexarray[0];
+    }
+
+    return 0;
 }
