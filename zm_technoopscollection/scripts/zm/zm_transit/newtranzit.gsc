@@ -31,6 +31,7 @@ main()
 	replacefunc(maps\mp\zm_transit_sq::richtofen_sidequest_a, ::richtofen_sidequest_a_new);
 	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
 	replacefunc(maps\mp\zm_transit::assign_lowest_unused_character_index, ::assign_lowest_unused_character_index);
+	replacefunc(maps\mp\zm_transit::include_equipment_for_level, ::include_equipment_for_level);
 
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)
 	{
@@ -563,4 +564,20 @@ assign_lowest_unused_character_index()
     }
 
     return 0;
+}
+
+include_equipment_for_level()
+{
+    level.equipment_turret_needs_power = 1;
+    level.equipment_etrap_needs_power = 1;
+    include_equipment( "jetgun_zm" );
+    include_equipment( "riotshield_zm" );
+    include_equipment( "equip_turbine_zm" );
+    include_equipment( "equip_turret_zm" );
+    include_equipment( "equip_electrictrap_zm" );
+    level.equipment_planted = ::equipment_planted;
+    level.equipment_safe_to_drop = ::equipment_safe_to_drop;
+    level.check_force_deploy_origin = ::use_safe_spawn_on_bus;
+    level.explode_overheated_jetgun = 1;
+    level.exploding_jetgun_fx = level._effect["lava_burning"];
 }

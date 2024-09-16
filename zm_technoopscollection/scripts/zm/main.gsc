@@ -578,7 +578,7 @@ init_dvars()
     
     //Infected from AW Zombies
     
-    create_dvar("enable_infected", 1);
+    create_dvar("enable_infected", 0);
     
     create_dvar("infected_start_round", 15);
     
@@ -619,6 +619,8 @@ init_dvars()
 	create_dvar("nuketown_perks_mode", 2);
 	
 	create_dvar("power_activates_buildables", 1);
+	
+	create_dvar("do_whoosh", 0);
 }
 
 init_player_things()
@@ -1002,6 +1004,12 @@ weaponanimation()
 	self takeweapon(weap);
 	flag_wait( "initial_blackscreen_passed" );
 	wait(1);
+	
+	if(getDvarInt("do_whoosh") == 1)
+	{
+		self whoosh();
+	}
+	
 	self giveweapon(weap);
 	primary_weapons = self getweaponslist( 1 );
 	for ( x = 0; x < primary_weapons.size; x++ )
@@ -3917,23 +3925,24 @@ spawnExit()
 		if ( i usebuttonpressed())
 		{
 			i enableinvulnerability();
+			i unwhoosh();
 			level.successfulexfil = 1;
-			escapetransition = newClientHudElem(i);
-			escapetransition.x = 0;
-			escapetransition.y = 0;
-			escapetransition.alpha = 0;
-			escapetransition.horzalign = "fullscreen";
-			escapetransition.vertalign = "fullscreen";
-			escapetransition.foreground = 0;
-			escapetransition setshader( "white", 640, 480 );
-			escapetransition.color = (0,0,0);
-			escapetransition fadeovertime( 0.5 );
-			escapetransition.alpha = 1;
-			wait 3;
-			
-			escapetransition.foreground = 0;
-			escapetransition fadeovertime( 0.2 );
-			escapetransition.alpha = 0;
+//			escapetransition = newClientHudElem(i);
+//			escapetransition.x = 0;
+//			escapetransition.y = 0;
+//			escapetransition.alpha = 0;
+//			escapetransition.horzalign = "fullscreen";
+//			escapetransition.vertalign = "fullscreen";
+//			escapetransition.foreground = 0;
+//			escapetransition setshader( "white", 640, 480 );
+//			escapetransition.color = (0,0,0);
+//			escapetransition fadeovertime( 0.5 );
+//			escapetransition.alpha = 1;
+//			wait 3;
+//			
+//			escapetransition.foreground = 0;
+//			escapetransition fadeovertime( 0.2 );
+//			escapetransition.alpha = 0;
 			i disableinvulnerability();
 			if (level.players.size == 1)
 			{
@@ -3942,10 +3951,10 @@ spawnExit()
 			}
 			else
 			{
-				escapetransition.alpha = 0;
+//				escapetransition.alpha = 0;
 				i thread maps\mp\gametypes_zm\_spectating::setspectatepermissions();
     			i.sessionstate = "spectator";
-				escapetransition destroy();
+//				escapetransition destroy();
 				if (checkAmountPlayers())
 				{
 					level thread sendsubtitletext(chooseAnnouncer(), 1, "Everyone has successfully escaped!", 5);
@@ -5558,18 +5567,17 @@ init_transitmisc()
 
 	level.skipstartcheck = 0;
 //	include_weapon( "jetgun_zm", 1 );
-//	replacefunc(maps/mp/zombies/_zm_weap_jetgun::handle_overheated_jetgun, ::handle_overheated_jetgun);
-	level.explode_overheated_jetgun = true;
-	level.unbuild_overheated_jetgun = false;
-	level.take_overheated_jetgun = true;
+//	level.explode_overheated_jetgun = true;
+//	level.unbuild_overheated_jetgun = false;
+//	level.take_overheated_jetgun = true;
 }
 
 player_transitmisc()
 {
 
-//	self maps/mp/zombies/_zm_equipment::equipment_give( "jetgun_zm" );
+//	self maps\mp\zombies\_zm_equipment::equipment_give( "jetgun_zm" );
 	self thread jetgun_unlimitedammo();
-	self thread switch_jetgun_modes();
+//	self thread switch_jetgun_modes();
 	
 	if (getDvarInt("enable_fog") == 1)
 	{
@@ -5588,8 +5596,8 @@ jetgun_unlimitedammo()
 	{
 		if(( self getcurrentweapon() == "jetgun_zm" ) && (self.jetgunmode == 0))
 		{
-//			self.jetgun_heatval = 0;
-//			self.jetgun_overheating = 0;
+			self.jetgun_heatval = 0;
+			self.jetgun_overheating = 0;
 			self setweaponoverheating( 0, 0 );
 		}
 		wait .1;
@@ -5606,41 +5614,6 @@ switch_jetgun_modes()
 		self notify ("jetgun_overheated");
 		
 	}
-}
-
-handle_overheated_jetgun()
-{
-    self endon( "disconnect" );
-
-    while ( true )
-    {
-        self waittill( "jetgun_overheated" );
-
-        if ( self getcurrentweapon() == "jetgun_zm" )
-        {
-            if ( isdefined( level.explode_overheated_jetgun ) && level.explode_overheated_jetgun )
-            {
-                self thread maps\mp\zombies\_zm_equipment::equipment_release( "jetgun_zm" );
-                weapon_org = self gettagorigin( "tag_weapon" );
-                self.jetgun_overheating = undefined;
-                self.jetgun_heatval = undefined;
-                self playsound( "wpn_jetgun_explo" );
-            }
-            else if ( isdefined( level.unbuild_overheated_jetgun ) && level.unbuild_overheated_jetgun )
-            {
-                self thread maps\mp\zombies\_zm_equipment::equipment_release( "jetgun_zm" );
-                maps\mp\zombies\_zm_buildables::unbuild_buildable( "jetgun_zm", 1 );
-                self.jetgun_overheating = undefined;
-                self.jetgun_heatval = undefined;
-            }
-            else if ( isdefined( level.take_overheated_jetgun ) && level.take_overheated_jetgun )
-            {
-                self thread maps\mp\zombies\_zm_equipment::equipment_release( "jetgun_zm" );
-                self.jetgun_overheating = undefined;
-                self.jetgun_heatval = undefined;
-            }
-        }
-    }
 }
 
 
@@ -7540,6 +7513,18 @@ command_thread()
 //			case ".cureme":
 //				player force_cure();
 //				break;
+			case ".restart":
+			case ".nextmap":
+			case ".nm":
+			case ".endmatch":
+				if(level.gungamestarted != 0)
+				{
+					if (level.gungame_nextmap_init == 0)
+					{
+						level thread initiate_restart();
+					}
+				}
+				break;
 			default:
 				break;
 		}
@@ -7548,7 +7533,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^22.7 - 8.21.2024");
+	self iprintln("^5Your Version: ^22.8 - 9.16.2024");
 }
 
 modslist_text()
@@ -10786,6 +10771,7 @@ wait_for_ready_input()
 					foreach (player in level.players)
 					{
 						player disableInvulnerability();
+						player iprintln("You can type .restart in chat to end the match!");
 					}
 					level notify ("end");
 				}
@@ -11846,6 +11832,75 @@ notify_next_tier_end()
 	self notify("end_next_tier");
 }
 
+
+initiate_restart()
+{
+	level.gungame_nextmap_init = 1;
+	level thread restartHUD();
+	foreach (player in level.players)
+	{
+		player thread wait_for_next_match_input();
+	}
+}
+
+restartHUD()
+{
+	level.gungamevotes = 0;
+	level.restarttime = 15;
+	level.restartHUD = newhudelem();
+	level.restartHUD.x = 0;
+	level.restartHUD.y -= 0;
+	level.restartHUD.alpha = 1;
+	level.restartHUD.alignx = "center";
+	level.restartHUD.aligny = "top";
+    level.restartHUD.horzalign = "user_center";
+    level.restartHUD.vertalign = "user_top";
+	level.restartHUD.foreground = 0;
+	level.restartHUD.fontscale = 1.5;
+//	level.restartHUD setText ("Press [{+melee}] and [{+speed_throw}] to vote to end the match!: ^5" + level.gungamevotes + "/" + level.players.size + " - " + level.restarttime);
+	
+	while(1)
+	{
+		level.restarttime -= 1;
+		level.restartHUD setText ("Press [{+melee}] and [{+speed_throw}] to vote to end the match!: ^5" + level.gungamevotes + "/" + level.players.size + " - " + level.restarttime);
+		wait 1;
+		if (level.restarttime == 0 || level.gungamevotes == level.players.size)
+		{
+			break;
+		}
+	}
+	
+	level.restartHUD destroy();
+	
+	if (level.restarttime == 0)
+	{
+		level.gungame_nextmap_init = 0;
+		level notify ("next_match_expired");
+	}
+	if (level.gungamevotes == level.players.size)
+	{
+		level.winner = "Nobody";
+		level notify( "end_game" );
+	}
+}
+
+wait_for_next_match_input()
+{
+	self endon ("next_match_voted");
+	level endon ("next_match_expired");
+	while(1)
+	{
+		if((self meleebuttonpressed() && self adsbuttonpressed()) || (isDefined(self.bot)))
+		{
+			level.gungamevotes += 1;
+			level.restartHUD setText ("Press [{+melee}] and [{+speed_throw}] to vote to end the match!: ^5" + level.gungamevotes + "/" + level.players.size + " - " + level.restarttime);
+			self notify ("next_match_voted");
+		}
+		wait 0.01;
+	}
+}
+
+
 ////////////////////////
 //
 //	Mystery Guns
@@ -12158,4 +12213,73 @@ change_power_new( delta, origin, radius )
     }
 
     self.powered_count++;
+}
+
+whoosh()
+{
+	level endon("game_end");
+	self enableinvulnerability();
+	self disableweapons();
+	self hide();
+	self freezecontrols( 1 );
+	zoomheight = 5000;
+	zoomback = 4000;
+	yaw = 55;
+	origin = self.origin;
+	self.origin += vector_scale( anglestoforward( self.angles + ( 0, -180, 0 ) ), zoomback ) + ( 0, 0, zoomheight );
+	ent = spawn( "script_model", ( 0, 0, 0 ) );
+	ent.angles += ( yaw, 0, 0 );
+	ent.origin = self.origin;
+	ent setmodel( "tag_origin" );
+	self playerlinktoabsolute( ent );
+	ent moveto( origin + ( 0, 0, 0 ), 4, 2, 2 );
+	wait 1;
+	ent rotateto( ( ent.angles[ 0] - yaw, ent.angles[ 1], 0 ), 3, 1, 1 );
+	wait 0.5;
+	self playlocalsound( "ui_camera_whoosh_in" );
+	wait 2.5;
+	self unlink();
+	wait 0.5;
+	ent delete();
+	self show();
+	self enableweapons();
+	self disableinvulnerability();
+}
+
+unwhoosh()
+{
+	level endon("game_end");
+	self enableinvulnerability();
+	self disableweapons();
+	self hide();
+	self freezecontrols( 1 );
+	zoomheight = 5000;
+	zoomback = 4000;
+	yaw = 55;
+	origin = self.origin;
+	ent = spawn( "script_model", ( 0, 0, 0 ) );
+	ent.angles += ( yaw, 0, 0 );
+	ent.origin = self.origin;
+	ent setmodel( "tag_origin" );
+	self playerlinktoabsolute( ent );
+	ent moveto( vector_scale( anglestoforward( self.angles + ( 0, -180, 0 ) ), zoomback ) + ( 0, 0, zoomheight ), 4, 2, 2 );
+	wait 1;
+	ent rotateto( ( ent.angles[ 0] - yaw, ent.angles[ 1], 0 ), 3, 1, 1 );
+	wait 0.5;
+	self playlocalsound( "ui_camera_whoosh_in" );
+	wait 2.5;
+	self unlink();
+	wait 0.5;
+	ent delete();
+	self show();
+	self enableweapons();
+	self.origin = origin;
+	self disableinvulnerability();
+}
+
+vector_scale( vec, scale )
+{
+	vec = ( vec[ 0] * scale, vec[ 1] * scale, vec[ 2] * scale );
+	return vec;
+
 }
