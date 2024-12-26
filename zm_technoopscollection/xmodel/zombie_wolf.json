@@ -1,0 +1,29 @@
+{
+    "_type": "xmodel",
+    "_version": 1,
+    "flags": 5242880,
+    "lightingOriginOffset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.5
+    },
+    "lightingOriginRange": 0.5,
+    "lods": [
+        {
+            "distance": 500.0,
+            "file": "model_export/zombie_wolf_lod0.GLB"
+        },
+        {
+            "distance": 800.0,
+            "file": "model_export/zombie_wolf_lod1.GLB"
+        },
+        {
+            "distance": 1000.0,
+            "file": "model_export/zombie_wolf_lod2.GLB"
+        },
+        {
+            "distance": 2500.0,
+            "file": "model_export/zombie_wolf_lod3.GLB"
+        }
+    ]
+}

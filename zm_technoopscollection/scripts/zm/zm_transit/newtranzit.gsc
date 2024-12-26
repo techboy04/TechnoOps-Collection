@@ -58,6 +58,7 @@ init()
 			{
 				level thread TEDDTrackerHUD();
 			}
+			level thread power_station_vision_change();
 		}
 	}
 	
@@ -111,7 +112,7 @@ richtofen_sidequest_a_new()
     {
         level.sq_volume waittill( "trigger", who );
 
-        if ( isplayer( who ) && isalive( who ) && who getcurrentweapon() == "jetgun_zm" )
+        if ( isplayer( who ) && isalive( who ) && who getcurrentweapon() == "jetgun_zm" && who attackbuttonpressed())
         {
             who thread left_sq_area_watcher( level.sq_volume );
             self.checking_jetgun_fire = 0;
@@ -580,4 +581,115 @@ include_equipment_for_level()
     level.check_force_deploy_origin = ::use_safe_spawn_on_bus;
     level.explode_overheated_jetgun = 1;
     level.exploding_jetgun_fx = level._effect["lava_burning"];
+}
+
+power_station_vision_change()
+{
+	level.default_r_exposureValue = 3;
+	level.changed_r_exposureValue = 4;
+	time = 1;
+
+	flag_wait("start_zombie_round_logic");
+
+	while (1)
+	{
+		players = get_players();
+
+		foreach (player in players)
+		{
+			if (!isDefined(player.power_station_vision_set))
+			{
+				player.power_station_vision_set = 0;
+				player.r_exposureValue = level.default_r_exposureValue;
+				player setClientDvar("r_exposureTweak", 1);
+				player setClientDvar("r_exposureValue", level.default_r_exposureValue);
+			}
+
+			spectating_player = player get_current_spectating_player();
+
+			if (!player.power_station_vision_set)
+			{
+				if (spectating_player maps\mp\zombies\_zm_zonemgr::entity_in_zone("zone_prr") || spectating_player maps\mp\zombies\_zm_zonemgr::entity_in_zone("zone_pcr"))
+				{
+					player.power_station_vision_set = 1;
+					player thread change_dvar_over_time("r_exposureValue", level.changed_r_exposureValue, time, 1);
+				}
+			}
+			else
+			{
+				if (!(spectating_player maps\mp\zombies\_zm_zonemgr::entity_in_zone("zone_prr") || spectating_player maps\mp\zombies\_zm_zonemgr::entity_in_zone("zone_pcr")))
+				{
+					player.power_station_vision_set = 0;
+					player thread change_dvar_over_time("r_exposureValue", level.default_r_exposureValue, time, 0);
+				}
+			}
+		}
+
+		wait 0.05;
+	}
+}
+
+change_dvar_over_time(dvar, val, time, increment)
+{
+	self notify("change_dvar_over_time");
+	self endon("change_dvar_over_time");
+
+	intervals = time * 20;
+	rate = (level.changed_r_exposureValue - level.default_r_exposureValue) / intervals;
+
+	i = 0;
+
+	while (i < intervals)
+	{
+		if (increment)
+		{
+			self.r_exposureValue += rate;
+
+			if (self.r_exposureValue > val)
+			{
+				self.r_exposureValue = val;
+			}
+		}
+		else
+		{
+			self.r_exposureValue -= rate;
+
+			if (self.r_exposureValue < val)
+			{
+				self.r_exposureValue = val;
+			}
+		}
+
+		self setClientDvar(dvar, self.r_exposureValue);
+
+		if (self.r_exposureValue == val)
+		{
+			return;
+		}
+
+		i++;
+		wait 0.05;
+	}
+
+	self setClientDvar(dvar, val);
+}
+
+get_current_spectating_player()
+{
+	if (self.currentspectatingclient == -1)
+	{
+		return self;
+	}
+
+	players = get_players();
+
+	foreach (player in players)
+	{
+		if (self.currentspectatingclient == player getentitynumber())
+		{
+			return player;
+		}
+	}
+
+	return self;
 }
