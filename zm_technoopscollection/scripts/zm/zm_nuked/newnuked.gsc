@@ -102,7 +102,7 @@ new_perks_from_the_sky()
 		bring_random_perk( machines, machine_triggers );
 	}
 	
-	
+	level thread finishedperkssound();
 
 }
 
@@ -147,4 +147,14 @@ new_update_doomsday_clock( min_hand_model )
 
     level notify( "nuke_clock_moved" );
     min_hand_model.is_updating = 0;
+}
+
+finishedperkssound()
+{
+    ent = spawn( "script_origin", ( 0, 0, 0 ) );
+	for(i = 0; i < 5; i++)
+	{
+		ent playsound( "zmb_clock_chime" );
+		wait 2;
+	}
 }

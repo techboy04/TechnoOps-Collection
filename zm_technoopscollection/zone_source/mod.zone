@@ -13,6 +13,12 @@ material,objective_marker
 material,defense_marker
 material,search_marker
 
+image,zombie_teddybear_n
+image,~-gzombie_teddybear_c
+material,mc/mtl_prop_bear
+xmodel,zombie_teddybear
+
+xmodel,zombie_z_money_icon
 image,specialty_2x_zombies
 image,specialty_firesale_zombies
 image,specialty_instakill_zombies

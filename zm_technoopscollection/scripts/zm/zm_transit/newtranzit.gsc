@@ -31,6 +31,7 @@ main()
 	replacefunc(maps\mp\zm_transit_sq::richtofen_sidequest_a, ::richtofen_sidequest_a_new);
 	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
 	replacefunc(maps\mp\zm_transit::assign_lowest_unused_character_index, ::assign_lowest_unused_character_index);
+	replacefunc(maps\mp\zm_transit::give_personality_characters, ::give_personality_characters);
 	replacefunc(maps\mp\zm_transit::include_equipment_for_level, ::include_equipment_for_level);
 
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)
@@ -516,6 +517,120 @@ custom_cloud_update_fx()
 	}
 }
 
+give_personality_characters()
+{
+    if ( isdefined( level.hotjoin_player_setup ) && [[ level.hotjoin_player_setup ]]( "c_zom_farmgirl_viewhands" ) )
+        return;
+
+    self detachall();
+
+	self thread character_selector();
+
+//    if ( !isdefined( self.characterindex ) )
+//        self.characterindex = assign_lowest_unused_character_index();
+
+    self.favorite_wall_weapons_list = [];
+    self.talks_in_danger = 0;
+/#
+    if ( getdvar( #"_id_40772CF1" ) != "" )
+        self.characterindex = getdvarint( #"_id_40772CF1" );
+#/
+
+    self character\c_transit_player_oldman::main();
+    self setviewmodel( "c_zom_oldman_viewhands" );
+    level.vox maps\mp\zombies\_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+    self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "frag_grenade_zm";
+    self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "claymore_zm";
+    self set_player_is_female( 0 );
+
+    self setmovespeedscale( 1 );
+    self setsprintduration( 4 );
+    self setsprintcooldown( 0 );
+    self set_player_tombstone_index();
+    self thread set_exert_id();
+}
+
+character_selector()
+{
+	self thread character_input();
+	
+	self waittill ("character_change");
+	
+	self.ignoreme = 0;
+	
+	self freezecontrols( 0 );
+}
+
+change_character(characternum)
+{
+	
+	switch ( characternum )
+    {
+        case 2:
+            self character\c_transit_player_farmgirl::main();
+            self setviewmodel( "c_zom_farmgirl_viewhands" );
+            level.vox maps\mp\zombies\_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+            self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "rottweil72_zm";
+            self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "870mcs_zm";
+            self set_player_is_female( 1 );
+            break;
+        case 0:
+            self character\c_transit_player_oldman::main();
+            self setviewmodel( "c_zom_oldman_viewhands" );
+            level.vox maps\mp\zombies\_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+            self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "frag_grenade_zm";
+            self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "claymore_zm";
+            self set_player_is_female( 0 );
+            break;
+        case 3:
+            self character\c_transit_player_engineer::main();
+            self setviewmodel( "c_zom_engineer_viewhands" );
+            level.vox maps\mp\zombies\_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+            self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m14_zm";
+            self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m16_zm";
+            self set_player_is_female( 0 );
+            break;
+        case 1:
+            self character\c_transit_player_reporter::main();
+            self setviewmodel( "c_zom_reporter_viewhands" );
+            level.vox maps\mp\zombies\_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+            self.talks_in_danger = 1;
+            level.rich_sq_player = self;
+            self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "beretta93r_zm";
+            self set_player_is_female( 0 );
+            break;
+    }
+
+	self.characterindex = characternum;
+    self thread set_exert_id();
+}
+
+character_input()
+{
+	self endon ("character_change");
+	
+	for(;;)
+	{
+		self.ignoreme = 1;
+		
+		self freezecontrols( 1 );
+		
+		if(self actionslotfourbuttonpressed())
+			self change_character(3);
+			self notify ("character_change");
+		if(self actionslotthreebuttonpressed())
+			self change_character(2);
+			self notify ("character_change");
+		if(self actionslottwobuttonpressed())
+			self change_character(1);
+			self notify ("character_change");
+		if(self actionslotonebuttonpressed())
+			self change_character(0);
+			self notify ("character_change");
+		wait 0.01;
+	}
+}
+
 assign_lowest_unused_character_index()
 {
     charindexarray = [];
@@ -524,8 +639,7 @@ assign_lowest_unused_character_index()
     charindexarray[2] = 2;
     charindexarray[3] = 3;
     players = get_players();
-
-    if ( players.size == 1 )
+	if ( players.size == 1 )
     {
         return 1;
     }

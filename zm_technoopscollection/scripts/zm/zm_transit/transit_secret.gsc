@@ -46,7 +46,7 @@ init()
 	
 	level._poi_override = ::unused_override;
 	level.partmodels = array("p6_zm_bu_sq_satellite_dish","p6_zm_bu_sq_crystal","p6_zm_tm_barbedwire_tube");
-	level.parts = array(true,true,true);
+	level.parts = array(false,false,false);
 	level.dirtPilesList = array((7726.28, -5133.31, 37.4349),(7813.05, -4956.94, 43.0341),(7806.02, -4723.67, 44.2192));
 	level thread workbench((1486.65, 2060.84, -47.8691), 0);
 	level.pickeduplavamachine = false;
@@ -54,7 +54,7 @@ init()
 	
 	level.chosenLavaPool = lavaPools[randomintrange(0,lavaPools.size - 1)];
 	
-//	level waittill ("power_on");
+	level waittill ("power_on");
 	level thread spawnPhone();
 	level.defensemode = false;
 }

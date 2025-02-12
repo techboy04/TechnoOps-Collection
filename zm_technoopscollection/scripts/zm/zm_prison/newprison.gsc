@@ -13,6 +13,7 @@
 #include maps\mp\zm_alcatraz_travel;
 #include maps\mp\zombies\_zm_ai_brutus;
 #include maps\mp\zm_alcatraz_classic;
+#include maps\mp\zm_alcatraz_amb;
 
 main()
 {

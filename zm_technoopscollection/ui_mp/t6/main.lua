@@ -382,6 +382,15 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "enable_mod_vox") == "" then
 		Engine.Exec(nil, "seta enable_mod_vox 1")
 	end
+	if UIExpression.DvarString(nil, "deadlight_rules") == "" then
+		Engine.Exec(nil, "seta deadlight_rules 0")
+	end
+	if UIExpression.DvarString(nil, "deadlight_voice") == "" then
+		Engine.Exec(nil, "seta deadlight_voice 1")
+	end
+	if UIExpression.DvarString(nil, "exfil_music") == "" then
+		Engine.Exec(nil, "seta exfil_music 0")
+	end
 end
 
 LUI.createMenu.main = function()
