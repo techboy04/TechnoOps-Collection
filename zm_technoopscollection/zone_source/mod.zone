@@ -1,6 +1,5 @@
 >game,T6
 >name,mod
->type,fastfile
 
 include,scripts
 include,slipgun
@@ -47,19 +46,6 @@ image,p6_termite_mound_small_n
 image,~-gp6_zm_tm_dig_mound_c
 xmodel,p6_zm_tm_dig_mound
 
-image,p6_zm_tm_zone_capture_hole_n
-image,~~-gp6_zm_tm_zone_capture_hol~42047888
-material,mc/mtl_p6_zm_tm_zone_capture_hole
-image,~~-gp6_zm_tm_skeleton_body_g-~f0e28eff
-image,p6_zm_tm_skeleton_body_n
-image,~-gp6_zm_tm_skeleton_body_c
-material,mc/mtl_p6_zm_tm_skeleton_body
-image,~~-gp6_zm_tm_skeleton_skull_g~36801fa6
-image,p6_zm_tm_skeleton_skull_n
-image,~-gp6_zm_tm_skeleton_skull_c
-material,mc/mtl_p6_zm_tm_skeleton_skull
-xmodel,p6_zm_tm_zone_capture_hole
-
 image,~~-gp_ztem_crystal_s-rgb&~-rp~cc62ff1a
 image,p_ztem_crystal_n
 image,~-gp_ztem_crystal_c
@@ -103,27 +89,6 @@ xmodel,p6_zm_tm_radio_01_panel3
 image,p6_zm_tm_radio_panels_blood_e
 material,mc/mtl_p6_zm_tm_radio_panels_blood
 xmodel,p6_zm_tm_radio_01_panel2_blood
-
-image,~~-gp6_zm_tm_generator_arm_s-~53dcb4d5
-image,p6_zm_tm_generator_arm_n
-image,~-gp6_zm_tm_generator_arm_c
-material,mc/mtl_p6_zm_tm_generator_arm
-xmodel,p6_zm_tm_generator_arm
-xmodel,p6_zm_tm_generator_stand
-
-image,~~-gmtl_p6_zm_tm_generator_st~66dccb58
-image,mtl_p6_zm_tm_generator_stand_n
-image,~-gmtl_p6_zm_tm_generator_stand_c
-material,mc/mtl_p6_zm_tm_generator_stand
-
-image,~-gmtl_p6_zm_tm_generator_stand01_c
-material,mc/mtl_p6_zm_tm_generator_stand_robot
-xmodel,p6_zm_tm_generator_stand_robot
-
-xmodel,p6_zm_tm_generator_pump
-
-image,~-gmtl_p6_zm_tm_generator_115_c
-material,mc/mtl_p6_zm_tm_generator_115
 
 image,tool_shovel_nml
 image,~-gtool_shovel_col

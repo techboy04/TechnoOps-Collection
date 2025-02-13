@@ -22,6 +22,7 @@
 #include maps\mp\zm_tomb_vo;
 #include maps\mp\zombies\_zm;
 #include maps\mp\zm_tomb_giant_robot;
+#include maps\mp\zm_tomb_utility;
 
 #using_animtree("zm_tomb_giant_robot_hatch");
 
@@ -30,6 +31,7 @@ main()
 	if (getDvarInt("enable_recapturerounds") == 0)
 	{
 		replacefunc(maps\mp\zm_tomb_capture_zones::recapture_round_start, ::recapture_round_start_new);
+		replacefunc(maps\mp\zm_tomb_utility::player_slow_movement_speed_monitor, ::player_slow_movement_speed_monitor);
 	}
 	replacefunc(maps\mp\zombies\_zm_craftables::craftable_use_hold_think_internal, ::craftable_use_hold_think_internal_new);
 	if (getDvarInt("enable_originsfootchanges") == 1)
@@ -248,4 +250,14 @@ giant_robot_think_new( trig_stomp_kill_right, trig_stomp_kill_left, clip_foot_ri
     self ghost();
     self detachall();
     level notify( "giant_robot_walk_cycle_complete" );
+}
+
+player_slow_movement_speed_monitor()
+{
+    self endon( "disconnect" );
+    n_movescale_delta_no_perk = 0.4 / 4.0;
+    n_movescale_delta_staminup = 0.3 / 6.0;
+    n_new_move_scale = 1.0;
+    n_move_scale_delta = 1.0;
+    self.n_move_scale = n_new_move_scale;
 }
