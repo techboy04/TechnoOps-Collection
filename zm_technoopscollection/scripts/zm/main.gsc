@@ -92,7 +92,7 @@ main()
 
 		replacefunc(maps\mp\zombies\_zm::round_think, ::round_think_minigame);
 		
-		if(getDvarInt("gamemode") != 3 && getDvarInt("gamemode") != 4)
+		if(getDvarInt("gamemode") != 3 && getDvarInt("gamemode") != 4 || getDvarInt("gamemode") != 5)
 		{
 			replacefunc(maps\mp\zombies\_zm::round_wait, ::round_wait_minigame);
 			replacefunc(maps\mp\zombies\_zm::round_over, ::round_over_minigame);
@@ -104,10 +104,11 @@ main()
 			replacefunc(maps\mp\zombies\_zm_powerups::init_powerups, ::init_powerups_minigame);
 		}
 		
-		if(getDvarInt("gamemode") == 1 || getDvarInt("gamemode") == 3)
+		if(getDvarInt("gamemode") == 1 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 		{
 			replacefunc(maps\mp\zombies\_zm_magicbox::treasure_chest_init, ::new_treasure_chest_init);
 			replacefunc(maps\mp\zombies\_zm_weapons::weapon_spawn_think, ::new_weapon_spawn_think);
+			replacefunc(maps\mp\zombies\_zm_powerups::init_powerups, ::init_powerups_minigame);
 			if(getDvarInt("gamemode") == 1)
 			{
 				replacefunc(maps\mp\zombies\_zm_perks::vending_weapon_upgrade, ::new_vending_weapon_upgrade);
@@ -115,10 +116,9 @@ main()
 				replacefunc(maps\mp\zombies\_zm_laststand::auto_revive, ::auto_revive_gungame);
 				replacefunc(maps\mp\zombies\_zm::player_damage_override, ::player_damage_override_gungame);
 				replacefunc(maps\mp\zombies\_zm_powerups::powerup_grab, ::powerup_grab_gungame);
-				replacefunc(maps\mp\zombies\_zm_powerups::init_powerups, ::init_powerups_minigame);
 				replacefunc(maps\mp\zombies\_zm::end_game, ::end_game_minigame);
 			}
-			else if (getDvarInt("gamemode") == 3)
+			else if (getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 			{
 				replacefunc(maps\mp\zombies\_zm::round_wait, ::round_wait_exfil);
 				replacefunc(maps\mp\zombies\_zm::round_over, ::new_round_over);	
@@ -172,7 +172,7 @@ init()
 
 	if( getDvarInt("gamemode") != 0)
 	{
-		if (getDvarInt("gamemode") != 3)
+		if (getDvarInt("gamemode") != 3 || getDvarInt("gamemode") != 5)
 		{
 			init_gamemode_powerups();
 		}
@@ -216,7 +216,7 @@ init()
 			}
 			level thread introHUD();
 		}
-		else if(getDvarInt("gamemode") == 3)
+		else if(getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 		{
 			level.perk_purchase_limit = 9;
 			level thread DelayMysteryList();
@@ -250,7 +250,7 @@ init()
 		}
 	}
 
-    if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3))
+    if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5))
     {
     	init_rageinducer();
     	level.modlist[level.modlist.size] = "Rampage Statue";
@@ -313,14 +313,14 @@ init()
     	level.modids[level.modids.size] = "transitpower";
     }
     	
-    if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4))
+    if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5))
     {
 		init_exfil();
     	level.modlist[level.modlist.size] = "Exfil";
     	level.modids[level.modids.size] = "exfil";
     }
     	
-    if (getDvarInt("enable_fasttravel") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3))
+    if (getDvarInt("enable_fasttravel") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5))
     {
     	init_fasttravel();
     	level.modlist[level.modlist.size] = "Fast Travel";
@@ -360,7 +360,7 @@ init()
     	level.modids[level.modids.size] = "secretmusic";
     }
     	
-    if (getDvarInt("enable_instantpap") == 1 || getDvarInt("gamemode") == 3)
+    if (getDvarInt("enable_instantpap") == 1 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
     {
     	init_instantpap();
     	level.modlist[level.modlist.size] = "Instant PAP";
@@ -374,7 +374,7 @@ init()
     	level.modids[level.modids.size] = "globalatm";
     }
 
-    if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3))
+    if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5))
     {
     	init_enemycounter();
     	level.modlist[level.modlist.size] = "Enemy Counter";
@@ -491,7 +491,7 @@ init()
 	
 	level.bonus_points_powerup_override = ::bonus_points_powerup_override;
 	
-    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3)
+    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 	{
 		include_powerup( "bonus_points_team" );
 		add_zombie_powerup( "bonus_points_team", "zombie_z_money_icon", &"ZOMBIE_POWERUP_BONUS_POINTS", ::func_should_always_drop, 0, 0, 0 );
@@ -505,7 +505,7 @@ init()
 
 bonus_points_powerup_override()
 {
-    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3)
+    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 	{
 		foreach (player in level.players)
 		{
@@ -579,6 +579,10 @@ onPlayerConnect()
 		{
 			player thread kill_on_downed();
 		}
+		else if (getDvarInt("gamemode") == 3)
+		{
+			player thread loopmaxammo();
+		}
 		else if (getDvarInt("gamemode") == 4)
 		{
 			player.beingPunished = 0;
@@ -586,6 +590,10 @@ onPlayerConnect()
 			player.suppress_points = 0;
 			player.lightchanges = 0;
 //			player thread moveCheckHUD();
+		}
+		else if (getDvarInt("gamemode") == 5)
+		{
+			player thread loopmaxammo();
 		}
 		
 		player thread respawnPlayer();
@@ -790,6 +798,8 @@ init_dvars()
 	create_dvar("deadlight_voice", 1);
 	
 	create_dvar("deadlight_rules", 0);
+	
+	create_dvar("sharpshooter_duration", 45);
 }
 
 init_player_things()
@@ -803,7 +813,7 @@ init_player_things()
 		
 		self.firstsetup = 1;
 		self thread newround();
-		if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3))
+		if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5))
 			self player_rageinducer();
 		if ((getDvarInt("enable_compass") == 1) || (getDvarInt("max_clients") > 4))
 		{
@@ -836,7 +846,7 @@ init_player_things()
 		}
 		
 
-		if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4))
+		if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5))
 			self player_exfil();
 		if (getDvarInt("enable_healthbar") == 1)
 			self player_health();
@@ -852,7 +862,7 @@ init_player_things()
 		if (getDvarInt("enable_infected") == 1 && getDvarInt("gamemode") == 0)
 			self player_infected();
 			
-		if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3))
+		if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5))
 			self player_enemycounter();
 		
 		
@@ -5261,7 +5271,7 @@ instapap(player){
 			player setweaponammostock( upgrade_weapon, new_stock );
 			player setweaponammoclip( upgrade_weapon, new_clip );
 		}
-		if(getDvarInt("gamemode") == 3)
+		if(getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 		{
 			player.hasupgraded = true;
 		}
@@ -6494,7 +6504,7 @@ checkmapperks()
 {
 	if (getDvar("mapname") == "zm_prison")
 	{
-		if (self.num_perks <= 5)
+		if (self.num_perks >= 5)
 		{
 			return true;
 		}
@@ -7977,7 +7987,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.0 - 12.26.2024");
+	self iprintln("^5Your Version: ^23.2 - 2.19.2025");
 }
 
 modslist_text()
@@ -10137,6 +10147,27 @@ init_powerups_minigame()
 		add_zombie_powerup( "empty_clip", "zombie_ammocan", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 0, 0, 1 );
 		add_zombie_powerup( "insta_kill_ug", "zombie_skull", &"ZOMBIE_POWERUP_INSTA_KILL", ::func_should_never_drop, 1, 0, 0, undefined, "powerup_instant_kill_ug", "zombie_powerup_insta_kill_ug_time", "zombie_powerup_insta_kill_ug_on", 5000 );
 	}
+	else if (getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
+	{
+		add_zombie_powerup( "nuke", "zombie_bomb", &"ZOMBIE_POWERUP_NUKE", ::func_should_always_drop, 0, 0, 0, "misc/fx_zombie_mini_nuke_hotness" );
+		add_zombie_powerup( "insta_kill", "zombie_skull", &"ZOMBIE_POWERUP_INSTA_KILL", ::func_should_always_drop, 0, 0, 0, undefined, "powerup_instant_kill", "zombie_powerup_insta_kill_time", "zombie_powerup_insta_kill_on" );
+		add_zombie_powerup( "full_ammo", "zombie_ammocan", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 0, 0, 0 );
+		add_zombie_powerup( "double_points", "zombie_x2_icon", &"ZOMBIE_POWERUP_DOUBLE_POINTS", ::func_should_always_drop, 0, 0, 0, undefined, "powerup_double_points", "zombie_powerup_point_doubler_time", "zombie_powerup_point_doubler_on" );
+		add_zombie_powerup( "carpenter", "zombie_carpenter", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_always_drop, 0, 0, 0 );
+		add_zombie_powerup( "fire_sale", "zombie_firesale", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 0, 0, 0, undefined, "powerup_fire_sale", "zombie_powerup_fire_sale_time", "zombie_powerup_fire_sale_on" );
+		add_zombie_powerup( "bonfire_sale", "zombie_pickup_bonfire", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 0, 0, 0, undefined, "powerup_bon_fire", "zombie_powerup_bonfire_sale_time", "zombie_powerup_bonfire_sale_on" );
+		add_zombie_powerup( "minigun", "zombie_pickup_minigun", &"ZOMBIE_POWERUP_MINIGUN", ::func_should_never_drop, 1, 0, 0, undefined, "powerup_mini_gun", "zombie_powerup_minigun_time", "zombie_powerup_minigun_on" );
+		add_zombie_powerup( "free_perk", "zombie_pickup_perk_bottle", &"ZOMBIE_POWERUP_FREE_PERK", ::func_should_never_drop, 0, 0, 0 );
+		add_zombie_powerup( "tesla", "zombie_pickup_minigun", &"ZOMBIE_POWERUP_MINIGUN", ::func_should_never_drop, 1, 0, 0, undefined, "powerup_tesla", "zombie_powerup_tesla_time", "zombie_powerup_tesla_on" );
+		add_zombie_powerup( "random_weapon", "zombie_pickup_minigun", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 1, 0, 0 );
+		add_zombie_powerup( "bonus_points_player", "zombie_z_money_icon", &"ZOMBIE_POWERUP_BONUS_POINTS", ::func_should_never_drop, 1, 0, 0 );
+		add_zombie_powerup( "bonus_points_team", "zombie_z_money_icon", &"ZOMBIE_POWERUP_BONUS_POINTS", ::func_should_never_drop, 0, 0, 0 );
+		add_zombie_powerup( "lose_points_team", "zombie_z_money_icon", &"ZOMBIE_POWERUP_LOSE_POINTS", ::func_should_never_drop, 0, 0, 1 );
+		add_zombie_powerup( "lose_perk", "zombie_pickup_perk_bottle", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 0, 0, 1 );
+		add_zombie_powerup( "empty_clip", "zombie_ammocan", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 0, 0, 1 );
+		add_zombie_powerup( "insta_kill_ug", "zombie_skull", &"ZOMBIE_POWERUP_INSTA_KILL", ::func_should_never_drop, 1, 0, 0, undefined, "powerup_instant_kill_ug", "zombie_powerup_insta_kill_ug_time", "zombie_powerup_insta_kill_ug_on", 5000 );
+
+	}
 
 
     if ( isdefined( level.level_specific_init_powerups ) )
@@ -11408,7 +11439,7 @@ round_think_minigame( restart )
         [[ level.round_wait_func ]]();
         level.first_round = 0;
         level notify( "end_of_round" );
-		if (getDvarInt("gamemode") == 3)
+		if (getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 		{
 			level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_end" );
 		}
@@ -11499,7 +11530,7 @@ wait_for_ready_input()
 						level.crankedstarted = 1;
 						level thread playcrankedmusic();
 					}
-					else if (getDvarInt("gamemode") == 3)
+					else if (getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
 					{
 						level.mysterygunsstarted = 1;
 					}
@@ -11543,6 +11574,10 @@ introHUD()
 	{
 		wait 3;
 		level thread redlight_greenlight();
+	}
+	else if(getDvarInt("gamemode") == 5)
+	{
+		level thread sharpshooter_hud();
 	}
 }
 
@@ -12073,6 +12108,10 @@ startHUDMessage()
 	{
 		hud2 settext("Dead Light Green Light");
 	}
+	else if (getDvarInt("gamemode") == 5)
+	{
+		hud2 settext("Sharpshooter");
+	}
 	hud2.fontscale = 8;
 	hud2 changefontscaleovertime( 1 );
     hud2 fadeovertime( 1 );
@@ -12108,6 +12147,10 @@ startHUDMessage()
 	else if (getDvarInt("gamemode") == 4)
 	{
 		hud3 settext("At Red Light, you must stay still until Green Light.");
+	}
+	else if (getDvarInt("gamemode") == 5)
+	{
+		hud3 settext("Weapons roll after a duration. If a weapon is upgraded, the next will be upgraded aswell.");
 	}
 	hud3.fontscale = 2;
 	hud3 changefontscaleovertime( 1 );
@@ -12731,13 +12774,71 @@ roll_weapon_on_round_over()
 {
 	for(;;)
 	{
-		level waittill( "between_round_over" );
+		if(getDvarInt("gamemode") == 5)
+		{
+			level waittill("force_weapon_cycle");
+		}
+		else
+		{
+			level waittill( "between_round_over" );
+		}
 		foreach (player in get_players())
 		{
 			player changeMysteryweapon();
 		}
 	}
 }
+
+sharpshooter_timer()
+{
+	for(;;)
+	{
+		level.sharpshooterseconds = getDvarInt("sharpshooter_duration");
+		level.sharpshooter_text setTimer(level.sharpshooterseconds);
+		
+		wait 1;
+	
+		while(level.sharpshooterseconds > 0)
+		{
+			level.sharpshooterseconds -= 1;
+			level.sharpshooter_text setTimer(level.sharpshooterseconds);
+			if(level.sharpshooterseconds <= 5)
+			{
+				foreach(player in level.players)
+				{
+					player playlocalsound("clock_tick");
+				}
+			}
+			wait 1;
+		}
+		
+		level notify ("force_weapon_cycle");
+		foreach(player in level.players)
+		{
+			player playlocalsound("zmb_cha_ching");
+		}
+	}
+}
+
+sharpshooter_hud()
+{
+	level.sharpshooter_text = newHudElem();
+	level.sharpshooter_text.alignx = "center";
+	level.sharpshooter_text.aligny = "bottom";
+	level.sharpshooter_text.horzalign = "user_center";
+	level.sharpshooter_text.vertalign = "user_bottom";
+	level.sharpshooter_text.x += 0;
+	level.sharpshooter_text.y -= 35;
+	level.sharpshooter_text.fontscale = 2;
+	level.sharpshooter_text.alpha = 1;
+	level.sharpshooter_text.color = ( 1, 1, 1 );
+	level.sharpshooter_text.hidewheninmenu = 1;
+	level.sharpshooter_text.foreground = 1;
+	level.sharpshooter_text.label = &"Next Weapon: ^2";
+	level.sharpshooter_text thread removeHUDEndGame();
+	level thread sharpshooter_timer();
+}
+
 
 round_wait_exfil()
 {

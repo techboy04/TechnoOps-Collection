@@ -1096,6 +1096,8 @@ GetSSGameType = function()
 		return "Mystery Guns"
 	elseif UIExpression.DvarInt(nil,"gamemode") == 4 then
 		return "Dead Light Green Light"
+	elseif UIExpression.DvarInt(nil,"gamemode") == 5 then
+		return "Sharpshooter"
 	else
 		return "Invalid Gamemode"
 	end
