@@ -643,6 +643,8 @@ GetGameType = function()
 		return "MYSTERY GUNS"
 	elseif UIExpression.DvarInt(nil,"gamemode") == 4 then
 		return "DEAD LIGHT GREEN LIGHT"
+	elseif UIExpression.DvarInt(nil,"gamemode") == 5 then
+		return "SHARPSHOOTER"
 	else
 		return "Invalid Gamemode"
 	end

@@ -30,8 +30,8 @@ main()
 	replaceFunc(maps\mp\zombies\_zm_ai_avogadro::cloud_update_fx, ::custom_cloud_update_fx);
 	replacefunc(maps\mp\zm_transit_sq::richtofen_sidequest_a, ::richtofen_sidequest_a_new);
 	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
-	replacefunc(maps\mp\zm_transit::assign_lowest_unused_character_index, ::assign_lowest_unused_character_index);
-	replacefunc(maps\mp\zm_transit::give_personality_characters, ::give_personality_characters);
+//	replacefunc(maps\mp\zm_transit::assign_lowest_unused_character_index, ::assign_lowest_unused_character_index);
+//	replacefunc(maps\mp\zm_transit::give_personality_characters, ::give_personality_characters);
 	replacefunc(maps\mp\zm_transit::include_equipment_for_level, ::include_equipment_for_level);
 
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)

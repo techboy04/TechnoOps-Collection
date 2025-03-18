@@ -582,6 +582,7 @@ onPlayerConnect()
 		else if (getDvarInt("gamemode") == 3)
 		{
 			player thread loopmaxammo();
+			player.mysteryweaponchanges = 0;
 		}
 		else if (getDvarInt("gamemode") == 4)
 		{
@@ -589,11 +590,13 @@ onPlayerConnect()
 			player.oldmoving = 0;
 			player.suppress_points = 0;
 			player.lightchanges = 0;
+			player.totallightchanges = 0;
 //			player thread moveCheckHUD();
 		}
 		else if (getDvarInt("gamemode") == 5)
 		{
 			player thread loopmaxammo();
+			player.mysteryweaponchanges = 0;
 		}
 		
 		player thread respawnPlayer();
@@ -645,6 +648,8 @@ onPlayerSpawned()
 			else if (getDvarInt("gamemode") == 2)
 			{
 				self thread crankedHUD();
+				
+				self.survival_start_time = getTime();
 			}
 		}
     }
@@ -800,6 +805,8 @@ init_dvars()
 	create_dvar("deadlight_rules", 0);
 	
 	create_dvar("sharpshooter_duration", 45);
+	
+	create_dvar("play_minigame_music", 1);
 }
 
 init_player_things()
@@ -5102,6 +5109,10 @@ getsound(type)
 		{
 			return "hit_ow";
 		}
+		else if (getDvarInt("enable_hitmarker") == 6)
+		{
+			return "hit_al";
+		}
 	}
 	else if (type == 2)
 	{
@@ -5120,6 +5131,10 @@ getsound(type)
 		else if (getDvarInt("enable_hitmarker") == 5)
 		{
 			return "kill_ow";
+		}
+		else if (getDvarInt("enable_hitmarker") == 6)
+		{
+			return "kill_al";
 		}
 
 	}
@@ -7987,7 +8002,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.2 - 2.19.2025");
+	self iprintln("^5Your Version: ^23.3 - 2.18.2025");
 }
 
 modslist_text()
@@ -10199,6 +10214,8 @@ kill_on_downed()
 		self thread bleed_out();
 		self.isEliminated = 1;
 		
+		self.survival_end_time = getTime();
+		
 		foreach (player in level.players)
 		{
 			player thread showBelowMessage(self.name + " has been eliminated!", "zmb_weap_wall");
@@ -11253,31 +11270,13 @@ end_game_minigame()
                         survived[i] settext( &"ZOMBIE_SURVIVED_ROUND" );
                 }
                 else
-                    if(getDvarInt("gamemode") == 1 || getDvarInt("gamemode") == 2)
-					{
-						survived[i] settext( "Match has ended" );
-					}
-					else
-					{
-						survived[i] settext( &"ZOMBIE_SURVIVED_ROUND" );
-					}
+				{
+					survived[i] settext( "You Survived " + level.round_number + " Round" + choose_end_text(players[i]) );
+				}
             }
             else
-                if (isDefined(level.winner))
-				{
-					survived[i] settext( "Your Score: " + players[i].weaponlevel );
-				}
-				else
-				{
-                    if(getDvarInt("gamemode") == 1 || getDvarInt("gamemode") == 2)
-					{
-						survived[i] settext( "Match has ended" );
-					}
-					else
-					{
-						survived[i] settext( &"ZOMBIE_SURVIVED_ROUND" );
-					}
-				}
+				survived[i] settext( "You Survived " + level.round_number + " Rounds" + choose_end_text(players[i]) );
+
 
             survived[i] fadeovertime( 1 );
             survived[i].alpha = 1;
@@ -11542,7 +11541,10 @@ wait_for_ready_input()
 					foreach (player in level.players)
 					{
 						player disableInvulnerability();
-						player iprintln("You can type .restart in chat to end the match!");
+						if (getDvarInt("gamemode") == 1)
+						{
+							player iprintln("You can type .restart in chat to end the match!");
+						}
 					}
 					level notify ("end");
 				}
@@ -12761,6 +12763,8 @@ changemysteryweapon()
 			self thread give_aat(upgradedgun);
 		}
 	}
+	
+	self.mysteryweaponchanges += 1;
 }
 
 rollgun()
@@ -13223,7 +13227,12 @@ init_music_states_new()
 
 playturnedmusic()
 {
-    ent = spawn( "script_origin", ( 0, 0, 0 ) );
+    if(getDvarInt("play_minigame_music") != 1)
+	{
+		return;
+	}
+	
+	ent = spawn( "script_origin", ( 0, 0, 0 ) );
     ent thread stopturnedmusic();
     playsoundatposition( "mus_zmb_gamemode_start", ( 0, 0, 0 ) );
     wait 5;
@@ -13452,10 +13461,10 @@ end_game_new()
                         survived[i] settext( &"ZOMBIE_SURVIVED_ROUND" );
                 }
                 else
-                    survived[i] settext( &"ZOMBIE_SURVIVED_ROUND" );
+                    survived[i] settext( "You Survived " + level.round_number + " Round" + choose_end_text(players[i]) );
             }
             else
-                survived[i] settext( &"ZOMBIE_SURVIVED_ROUNDS", level.round_number );
+                survived[i] settext( "You Survived " + level.round_number + " Rounds" + choose_end_text(players[i]) );
 
             survived[i] fadeovertime( 1 );
             survived[i].alpha = 1;
@@ -13520,6 +13529,35 @@ end_game_new()
 
     exitlevel( 0 );
     wait 666;
+}
+
+choose_end_text(player)
+{
+	if(getDvarInt("gamemode") == 1)
+	{
+		return " and Your Score is " + player.weaponlevel;
+	}
+	else if(getDvarInt("gamemode") == 2)
+	{
+		total_survival_time = int((player.survival_end_time - player.survival_start_time) / 1000);
+		return " and Your Survival Time is " + total_survival_time;
+	}
+	else if(getDvarInt("gamemode") == 3)
+	{
+		return "";
+	}
+	else if(getDvarInt("gamemode") == 4)
+	{
+		return " and Survived " + player.totallightchanges + " Light Changes";
+	}
+	else if(getDvarInt("gamemode") == 5)
+	{
+		return " and Survived " + player.mysteryweaponchanges + " Weapon Cycles";
+	}
+	else
+	{
+		return "";
+	}
 }
 
 removeHUDEndGame()
@@ -14031,6 +14069,12 @@ change_light(lightid)
 		{
 			player.lightchanges += 1;
 		}
+		
+		if(isAlive(player))
+		{
+			player.totallightchanges += 1;
+		}
+		
 		player reset_punishments();
 	}
 	

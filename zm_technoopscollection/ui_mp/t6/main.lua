@@ -394,6 +394,9 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "sharpshooter_duration") == "" then
 		Engine.Exec(nil, "seta sharpshooter_duration 45")
 	end
+	if UIExpression.DvarString(nil, "play_minigame_music") == "" then
+		Engine.Exec(nil, "seta play_minigame_music 1")
+	end
 end
 
 LUI.createMenu.main = function()
