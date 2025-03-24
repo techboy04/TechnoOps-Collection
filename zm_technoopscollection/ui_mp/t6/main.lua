@@ -397,6 +397,12 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "play_minigame_music") == "" then
 		Engine.Exec(nil, "seta play_minigame_music 1")
 	end
+	if UIExpression.DvarString(nil, "planeparts_per_player") == "" then
+		Engine.Exec(nil, "seta planeparts_per_player 1")
+	end
+	if UIExpression.DvarString(nil, "enable_9lives") == "" then
+		Engine.Exec(nil, "seta enable_9lives 0")
+	end
 end
 
 LUI.createMenu.main = function()

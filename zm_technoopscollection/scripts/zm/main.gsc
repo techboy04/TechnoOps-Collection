@@ -31,7 +31,8 @@ main()
 {
 	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
 
-//	create_dvar("gamemode", 0);
+	create_dvar("gamemode", 0);
+	makedvarserverinfo("gamemode", getDvarInt("gamemode"));
 //	create_dvar("gungame_ladder", 1);
 	
 	precacheshader("scorebar_zom_1");
@@ -807,6 +808,10 @@ init_dvars()
 	create_dvar("sharpshooter_duration", 45);
 	
 	create_dvar("play_minigame_music", 1);
+	
+	create_dvar("planeparts_per_player", 0);
+	
+	create_dvar("enable_9lives", 0);
 }
 
 init_player_things()
@@ -5113,6 +5118,10 @@ getsound(type)
 		{
 			return "hit_al";
 		}
+		else if (getDvarInt("enable_hitmarker") == 7)
+		{
+			return "hit_8bit";
+		}
 	}
 	else if (type == 2)
 	{
@@ -5135,6 +5144,10 @@ getsound(type)
 		else if (getDvarInt("enable_hitmarker") == 6)
 		{
 			return "kill_al";
+		}
+		else if (getDvarInt("enable_hitmarker") == 7)
+		{
+			return "kill_8bit";
 		}
 
 	}
@@ -8002,7 +8015,7 @@ command_thread()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.3 - 2.18.2025");
+	self iprintln("^5Your Version: ^23.4 - 3.24.2025");
 }
 
 modslist_text()

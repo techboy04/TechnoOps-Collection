@@ -21,7 +21,7 @@ hehe sorta fixed by Techie :)
 init()
 {
 	level.clientid = 0;
-	if (getDvarInt("gamemode") == 0)
+	if (getDvarInt("gamemode") == 0 && getDvarInt("enable_9lives") == 1)
 	{
 		level thread onplayerconnect();
 	}
@@ -68,14 +68,14 @@ afterlife_player_refill_watch()
 }
 
 afterlife_add()
-{
-	    if (self.lives >= 0 && self.lives < 9) 
-		{
+{	
+	if (self.lives >= 0 && self.lives < 9) 
+	{
           
-			self.lives++;
-			self thread afterlife_add_fx();
+		self.lives++;
+		self thread afterlife_add_fx();
 
-		}
+	}
 	self playsoundtoplayer( "zmb_afterlife_add", self );
 	self setclientfieldtoplayer( "player_lives", self.lives );
 } 

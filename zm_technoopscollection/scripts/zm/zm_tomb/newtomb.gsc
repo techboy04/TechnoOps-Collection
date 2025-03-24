@@ -42,6 +42,10 @@ main()
 	{
 		replacefunc(maps\mp\zm_tomb_vo::start_samantha_intro_vo, ::start_samantha_intro_vo_new);
 	}
+	
+	replacefunc(maps\mp\zm_tomb_tank::tank_ran_me_over, ::tank_ran_me_over_new);
+	replacefunc(maps\mp\zm_tomb_giant_robot::giant_robot_head_player_eject_thread, ::giant_robot_head_player_eject_thread_new);
+	
 }
 
 recapture_round_start_new()
@@ -260,4 +264,147 @@ player_slow_movement_speed_monitor()
     n_new_move_scale = 1.0;
     n_move_scale_delta = 1.0;
     self.n_move_scale = n_new_move_scale;
+}
+
+tank_ran_me_over_new()
+{
+    self.b_tank_ran_me_over = 1;
+	if(!isgodmode( self ))
+	{
+		self disableinvulnerability();
+	}
+    self dodamage( self.health + 1000, self.origin );
+    a_nodes = getnodesinradiussorted( self.origin, 256, 0, 72, "path", 15 );
+
+    foreach ( node in a_nodes )
+    {
+        str_zone = maps\mp\zombies\_zm_zonemgr::get_zone_from_position( node.origin );
+
+        if ( !isdefined( str_zone ) )
+            continue;
+
+        if ( !( isdefined( node.b_player_downed_here ) && node.b_player_downed_here ) )
+        {
+            start_wait = 0.0;
+            black_screen_wait = 4.0;
+            fade_in_time = 0.01;
+            fade_out_time = 0.2;
+            self thread maps\mp\gametypes_zm\_hud::fadetoblackforxsec( start_wait, black_screen_wait, fade_in_time, fade_out_time, "black" );
+            node.b_player_downed_here = 1;
+            e_linker = spawn( "script_origin", self.origin );
+            self playerlinkto( e_linker );
+            e_linker moveto( node.origin + vectorscale( ( 0, 0, 1 ), 8.0 ), 1.0 );
+            e_linker wait_to_unlink( self );
+            node.b_player_downed_here = undefined;
+            e_linker delete();
+            self.b_tank_ran_me_over = undefined;
+            return;
+        }
+    }
+
+    self.b_tank_ran_me_over = undefined;
+}
+
+giant_robot_head_player_eject_thread_new( m_linkpoint, str_tube, b_timeout )
+{
+    alreadyingodmode = isgodmode( self );
+	
+	if ( !isdefined( b_timeout ) )
+        b_timeout = 0;
+
+    self endon( "death_or_disconnect" );
+    self maps\mp\zm_tomb_giant_robot_ffotd::giant_robot_head_player_eject_start();
+    str_current_weapon = self getcurrentweapon();
+    self disableweapons();
+    self disableoffhandweapons();
+    self enableinvulnerability();
+    self setstance( "stand" );
+    self allowstand( 1 );
+    self allowcrouch( 0 );
+    self allowprone( 0 );
+    self playerlinktodelta( m_linkpoint, "tag_origin", 1, 20, 20, 20, 20 );
+    self setplayerangles( m_linkpoint.angles );
+    self ghost();
+    self.dontspeak = 1;
+    self setclientfieldtoplayer( "isspeaking", 1 );
+    self notify( "teleport" );
+    self.giant_robot_transition = 1;
+    self playsoundtoplayer( "zmb_bot_timeout_alarm", self );
+    self.old_angles = self.angles;
+
+    if ( !b_timeout )
+    {
+        self setclientfield( "eject_steam_fx", 1 );
+        self thread in_tube_manual_looping_rumble();
+        wait 3.0;
+    }
+
+    self stopsounds();
+    wait_network_frame();
+    self playsoundtoplayer( "zmb_giantrobot_exit", self );
+    self notify( "end_in_tube_rumble" );
+    self thread exit_gr_manual_looping_rumble();
+    m_linkpoint moveto( m_linkpoint.origin + vectorscale( ( 0, 0, 1 ), 2000.0 ), 2.5 );
+    self thread fadetoblackforxsec( 0, 2.0, 1.0, 0.0, "white" );
+    wait 1.0;
+    m_linkpoint moveto( self.teleport_initial_origin + vectorscale( ( 0, 0, 1 ), 3000.0 ), 0.05 );
+    m_linkpoint.angles = vectorscale( ( 1, 0, 0 ), 90.0 );
+    self enableweapons();
+    self giveweapon( "falling_hands_tomb_zm" );
+    self switchtoweaponimmediate( "falling_hands_tomb_zm" );
+    self setweaponammoclip( "falling_hands_tomb_zm", 0 );
+    wait 1.0;
+    self playsoundtoplayer( "zmb_giantrobot_fall", self );
+    self playerlinktodelta( m_linkpoint, "tag_origin", 1, 180, 180, 20, 20 );
+    m_linkpoint moveto( self.teleport_initial_origin, 3, 1.0 );
+    m_linkpoint thread play_gr_eject_impact_player_fx( self );
+    m_linkpoint notify( "start_gr_eject_fall_to_earth" );
+    self thread player_screams_while_falling();
+    wait 2.75;
+    self thread fadetoblackforxsec( 0, 1.0, 0, 0.5, "black" );
+    self waittill( "gr_eject_fall_complete" );
+    self takeweapon( "falling_hands_tomb_zm" );
+
+    if ( isdefined( str_current_weapon ) && str_current_weapon != "none" )
+        self switchtoweaponimmediate( str_current_weapon );
+
+    self enableoffhandweapons();
+    self unlink();
+    m_linkpoint delete();
+    self teleport_player_to_gr_footprint_safe_spot();
+    self show();
+    self setplayerangles( self.old_angles );
+	if(alreadyingodmode)
+	{
+		self disableinvulnerability();
+	}
+    self.dontspeak = 0;
+    self allowstand( 1 );
+    self allowcrouch( 1 );
+    self allowprone( 1 );
+    self setclientfieldtoplayer( "isspeaking", 0 );
+    self.in_giant_robot_head = undefined;
+    self.teleport_initial_origin = undefined;
+    self.old_angles = undefined;
+    self thread gr_eject_landing_rumble();
+    self thread gr_eject_landing_rumble_on_position();
+    self setclientfield( "eject_steam_fx", 0 );
+    n_post_eject_time = 2.5;
+    self setstance( "prone" );
+    self shellshock( "explosion", n_post_eject_time );
+    self.giant_robot_transition = 0;
+    self notify( "gr_eject_sequence_complete" );
+
+    if ( !flag( "story_vo_playing" ) )
+        self delay_thread( 3.0, maps\mp\zombies\_zm_audio::create_and_play_dialog, "general", "air_chute_landing" );
+
+/#
+    debug_level = getdvarint( #"zombie_cheat" );
+
+    if ( isdefined( debug_level ) && debug_level )
+        self enableinvulnerability();
+#/
+    wait( n_post_eject_time );
+    self.ignoreme = 0;
+    self maps\mp\zm_tomb_giant_robot_ffotd::giant_robot_head_player_eject_end();
 }
