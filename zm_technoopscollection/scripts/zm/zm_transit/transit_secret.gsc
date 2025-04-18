@@ -14,6 +14,17 @@
 #include maps\mp\zombies\_zm_ai_basic;
 #include maps\mp\zombies\_zm_powerups;
 #include scripts\zm\main;
+#include maps\mp\zombies\_zm_afterlife;
+#include maps\mp\gametypes_zm\_spawnlogic;
+#include maps\mp\zombies\_zm_ai_avogadro;
+#include maps\mp\animscripts\zm_death;
+#include maps\mp\animscripts\shared;
+#include maps\mp\animscripts\utility;
+#include maps\mp\animscripts\zm_utility;
+#include maps\mp\animscripts\zm_shared;
+#include maps\mp\_visionset_mgr;
+#include maps\mp\zm_transit_bus;
+
 
 main()
 {
@@ -29,11 +40,20 @@ main()
 	precacheshader("objective_marker");
 	precacheshader("defense_marker");
 	precacheshader("search_marker");
+
+	replacefunc(maps\mp\zombies\_zm::round_spawn_failsafe, ::round_spawn_failsafe_new);
+    replaceFunc(maps\mp\zm_transit_distance_tracking::delete_zombie_noone_looking, ::delete_zombie_noone_looking);
+	replacefunc(maps\mp\zombies\_zm::actor_damage_override, ::actor_damage_override);
+	replacefunc(maps\mp\zombies\_zm_ai_avogadro::avogadro_prespawn, ::avogadro_prespawn);
+
+	precachemodel("c_zom_avagadro_fb");
 }
 
 init()
 {
 	setLogsLocation();
+	
+	custom_secret_song_spawns(array((-6304.36, 5337.64, -55.875),(1747.24, -1438.61, -55.875),(-6496.36, -7859.64, 6.45054)), array(45,-134.287,-45), "mus_custom_transit_ee");
 	
 	if(getDvar("mapname") == "zm_transit" && getDvar( "g_gametype" ) == "zclassic" && getDvarInt("gamemode") == 0)
 	{
@@ -194,12 +214,12 @@ loopMusic(music)
 forcerun()
 {
  	self endon ("end_horde");
+	level endon ("boss_died");
 	for(;;)
 	{
 		can_sprint = false;
 		zombies = getAiArray(level.zombie_team);
 		foreach(zombie in zombies)
-//		zombie.cloned_distance = self.origin;
 		if(!isDefined(zombie.cloned_distance))
 			zombie.cloned_distance = zombie.origin;
 		else if(distance(zombie.cloned_distance, zombie.origin) > 15){
@@ -404,8 +424,6 @@ spawnDirtPile(location, isPart)
 				}
 				else
 				{
-//					level thread chooseDirtReward();
-//					level thread digPilePowerup(level.zombie_include_powerups[randomintrange(0,level.zombie_include_powerups.size - 1)], digTrigger.origin);
 					level thread digPilePowerup("bonus_points_team", digTrigger.origin);
 				}
 			
@@ -437,9 +455,6 @@ displaySpawnerSize()
 {
 	for(;;)
 	{
-//		level.dog_spawners = getentarray( "zombie_dog_spawner", "script_noteworthy" );
-//		later_dogs = getentarray( "later_round_dog_spawners", "script_noteworthy" );
-//		level.dog_spawners = arraycombine( level.dog_spawners, later_dogs, 1, 0 );
 		
 		foreach (player in level.players)
 		{
@@ -454,7 +469,7 @@ tranzitEEsequence()
 {
 	level thread ignoreAllPlayers(1);
 	thread nuke_flash();
-	do_vox_subtitles("Phone", "*static*", 2, "");
+	wait 2;
 	do_vox_subtitles("Phone", "Hello? Anyone there?", 3, "vox_intro_1");
 	do_vox_subtitles("Entity", "I recognize that voice!", 2, "vox_intro_2");
 	do_vox_subtitles("Phone", "Im stuck in some part of the Aether, like a deeper layer of it.", 4, "vox_intro_3");
@@ -462,14 +477,16 @@ tranzitEEsequence()
 	do_vox_subtitles("Entity", "You must find the parts to the device so we can contact him!", 4, "vox_intro_5");
 	
 	level thread ignoreAllPlayers(0);
+	
+	level thread minion_round_watcher();
 
-	level thread createGuidedPartIcon(0, (7930.38, -5716.31, 11.3838));
+//	level thread createGuidedPartIcon(0, (7930.38, -5716.31, 11.3838));
 	wait 0.2;
-	level thread createGuidedPartIcon(1, (-11340.5, -983.951, 192.125));
+//	level thread createGuidedPartIcon(1, (-11340.5, -983.951, 192.125));
 	wait 0.2;
-	level thread createGuidedPartIcon(2, (1478.87, -434.099, -67.875));
+//	level thread createGuidedPartIcon(2, (1478.87, -434.099, -67.875));
 	wait 0.2;
-	level thread createGuidedShovelIcon((-4183,-7764,-61));
+//	level thread createGuidedShovelIcon((-4183,-7764,-61));
 
 	level thread setObjective("Find the parts", "", (0,0,0));
 
@@ -522,14 +539,17 @@ spawnPart(location, partnum)
 			if(partnum == 0)
 			{
 				do_vox_subtitles("Entity", "The satellite will be perfect for projecting the connection.", 3, "vox_part_1");
+				notify_player_action(i.name + " picked up a satellite");
 			}
 			else if(partnum == 1)
 			{
 				do_vox_subtitles("Entity", "That crystal is useful for going past the Aethers barrier. Letting us reach to him!", 5, "vox_part_2");
+				notify_player_action(i.name + " picked up a crystal");
 			}
 			else if(partnum == 2)
 			{
 				do_vox_subtitles("Entity", "Those electronic parts could help add that extra energy to our connection.", 4, "vox_part_3");
+				notify_player_action(i.name + " picked up wires");
 			}
 			
 			if(level.parts[0] == true && level.parts[1] == true && level.parts[2] == true)
@@ -704,14 +724,6 @@ end_machine_defense_fail()
 	level thread spawnLavaDiggerTrigger(level.chosenLavaPool);
 	
 	do_vox_subtitles("Entity", "The machine is repaired. You can start it again!", 3, "vox_part_2_tryagain");
-	
-	//(-1869.18, -6016.01, -103.602)
-	//(6597.45, -4372.54, -60.875)
-	//(10004.8, 7751.69, -582.875)
-	//(1331.44, 196.033, -69.875)
-	//(-9285.7, 4334.71, 44.5352)
-	//(-11208.6, -1158.58, 194.125)
-	//(-11208.6, -1158.58, 194.125)
 }
 
 
@@ -821,7 +833,7 @@ attack_function()
         {
 			angles = VectorToAngles( level.machine.origin - self.origin );
 			self animscripted( self.origin, angles, attackanim );
-			level.machine machine_damage(1);
+			level.machine machine_damage(3);
 			wait 1;
         }
 		else
@@ -889,6 +901,7 @@ step2defensehealthbar()
 		wait 0.1;
 	}
 	
+	defense_bar.barframe destroy();
 	defense_bar.bar destroy();
 	defense_bar destroy();
 }
@@ -1127,10 +1140,9 @@ stopphone()
 
 finalEncounterSequence()
 {
-	level.holdround = true;
-	
 	level maps\mp\zombies\_zm_powerups::specific_powerup_drop("full_ammo", (1490.28, 1962.94, -47.4356));
 	
+	level.holdround = true;
 	level.zombie_total = 0;
 	
 	zombies = getaiarray( level.zombie_team );
@@ -1225,24 +1237,19 @@ finalEncounterSequence()
 	do_vox_subtitles("Phone", "Its strong! I hear you perfectly!", 3, "vox_final_4");
 	do_vox_subtitles("Entity", "Im getting you out of there! This connection should definitely help. Look out for the portal!", 5, "vox_final_5");
 	do_vox_subtitles("Phone", "I see it! Entering now! *portal sounds*", 10, "vox_final_6");
-	do_vox_subtitles("Entity", "Humans! Your gratitude will be acknowledged!", 5, "vox_final_7");
-	
-	
+
 	level notify ("main_quest_over");
 	
-	level thread setObjective("", "", (0,0,0));
-	
-	level thread spawnRewards((-5183.93, -7318.26, -68.9245));
-	
-	foreach (player in level.players)
-	{
-		player thread give_player_all_perks();
-	}
-	
-	level.completedmodmainquest = true;
+	earthquake( 1, 5, level.workbench.origin, 3000 );
+
+	do_vox_subtitles("Entity", "Something is jamming the signal!", 2, "vox_final_8");
+	do_vox_subtitles("Entity", "Sounds like its coming from the Town!", 3, "vox_final_9");
+
+	level thread spawnBossStart();
+
 	level.defensemode = false;
 	level.infinalphase = false;
-	level.zombie_total = 0;
+	level.zombie_total = 14;
 	level._poi_override = ::unused_override;
 	level.holdround = false;
 }
@@ -1306,8 +1313,9 @@ destroyFinalDefenseHUD()
 	level.defense_text destroy();
 	foreach (player in level.players)
 	{
-		player.defense_bar destroy();
 		player.defense_bar.bar destroy();
+		player.defense_bar.barframe destroy();
+		player.defense_bar destroy();
 	}
 }
 
@@ -1346,10 +1354,12 @@ startEncounterIfPlayersAreNear(isFinal)
 		level thread playfinalmusic();
 	
 		level thread if_all_players_are_too_far_away();
+		
+		time = randomintrange(60,90);
 	
 		level.defense_text.label = &"Defend the Workbench: ^6";
-		level.defense_text setTimer(90);
-		wait_with_endon(90);
+		level.defense_text setTimer(time);
+		wait_with_endon(time);
 	
 		if(level.workbenchhealth <= 0)
 		{
@@ -1429,7 +1439,7 @@ finaldefensehud()
 	level.defense_text.alpha = 1;
 	level.defense_text.color = ( 1, 1, 1 );
 	level.defense_text.hidewheninmenu = 1;
-	level.defense_text.foreground = 1;
+	level.defense_text.foreground = 0;
 }
 
 finaldefensehealthbar()
@@ -1440,13 +1450,16 @@ finaldefensehealthbar()
 		self.defense_bar destroy();
 	}
 	
-	
 	self.defense_bar = self createprimaryprogressbar();
 	self.defense_bar setpoint("TOP_LEFT", undefined, 0, 0);
 	self.defense_bar.hidewheninmenu = 1;
 	self.defense_bar.bar.hidewheninmenu = 1;
 	self.defense_bar.barframe.hidewheninmenu = 1;
 	self.defense_bar.alpha = 1;
+	self.defense_bar.foreground = 1;
+	self.defense_bar.bar.foreground = 1;
+	self.defense_bar.barframe.background = 1;
+	
 	
 	while(level.infinalphase)
 	{
@@ -1457,6 +1470,7 @@ finaldefensehealthbar()
 		wait 0.1;
 	}
 	
+	self.defense_bar.barframe destroy();
 	self.defense_bar.bar destroy();
 	self.defense_bar destroy();
 }
@@ -1524,7 +1538,7 @@ finalDefenseEncounter()
                 if( !( isdefined(zombie.is_mechz) && zombie.is_mechz )  && !( isdefined( zombie.ATK ) && zombie.ATK ) && isdefined( zombie ) && zombie isTouching( playables[ a ] ) && zombie.completed_emerging_into_playable_area == 1 && zombie.is_traversing == 0 && !( isdefined( zombie.is_traversing ) && zombie.is_traversing ) && zombie.ai_state == "find_flesh")
                 {
                     zombie.ATK = 1;
-					zombie set_zombie_run_cycle("super_sprint");
+					zombie set_zombie_run_cycle("sprint");
 
 					
                     zombie thread workbench_attack_function();
@@ -1790,7 +1804,7 @@ random_part3_players()
 			{
 				if( !( isdefined(zombie.is_mechz) && zombie.is_mechz )  && zombie isTouching( playables[ a ] ) && zombie.completed_emerging_into_playable_area == 1 && zombie.is_traversing == 0 && !( isdefined( zombie.is_traversing ) && zombie.is_traversing ) && zombie.ai_state == "find_flesh")
 				{
-					if(randomintrange(1,100) >= 98)
+					if(randomintrange(1,100) >= 60)
 					{
 						playfx(level._effect["powerup_grabbed"], zombie.origin);
 						level thread spawnpart(zombie.origin, 2);
@@ -1924,6 +1938,7 @@ placeScrambler(location, angle)
 		if( i usebuttonpressed() )
 		{
 			level.pickedupscrambler = 1;
+			notify_player_action(i.name + " picked up a radio scrambler");
 			radioTrigger delete();
 			radioModel delete();
 		}
@@ -2020,4 +2035,1141 @@ FinalEncounterVote()
 	level.finalVoteHUD fadeovertime( 0.25 );
 	level.finalVoteHUD.alpha = 0;
 	level.finalVoteHUD destroy();
+}
+
+//#using_animtree("zm_transit_avogadro");
+
+spawn_boss( spawner, target_name, spawn_point, round_number, origin )
+{
+	
+	if ( !isdefined( spawner ) )
+    {
+/#
+        println( "ZM >> spawn_zombie - NO SPAWNER DEFINED" );
+#/
+        return undefined;
+    }
+
+    while ( getfreeactorcount() < 1 )
+        wait 0.05;
+
+    spawner.script_moveoverride = 1;
+
+    if ( isdefined( spawner.script_forcespawn ) && spawner.script_forcespawn )
+    {
+        guy = spawner spawnactor();
+
+        if ( isdefined( level.giveextrazombies ) )
+            guy [[ level.giveextrazombies ]]();
+
+        guy enableaimassist();
+
+        if ( isdefined( round_number ) )
+            guy._starting_round_number = round_number;
+
+        guy.aiteam = level.zombie_team;
+        guy clearentityowner();
+        level.zombiemeleeplayercounter = 0;
+        guy thread run_spawn_functions();
+        guy.origin = origin;
+        guy show();
+//		guy setmodel( "c_zom_avagadro_fb" );
+		guy thread set_boss_anims();
+		
+		guy.has_legs = 1;
+		guy.no_gib = 1;
+		guy.allowpain = 1;
+		guy.is_avogadro = 1;
+		guy.ignore_nuke = 1;
+		guy.ignore_lava_damage = 1;
+		guy.ignore_devgui_death = 1;
+		guy.ignore_electric_trap = 1;
+		guy.ignore_game_over_death = 1;
+		guy.ignore_enemyoverride = 1;
+		guy.ignore_solo_last_stand = 1;
+		guy.ignore_riotshield = 1;
+		guy.displayname = "Avogadro";
+		
+    }
+
+    spawner.count = 666;
+
+    if ( !spawn_failed( guy ) )
+    {
+        if ( isdefined( target_name ) )
+            guy.targetname = target_name;
+
+        return guy;
+    }
+
+    return undefined;
+}
+
+force_spawn_boss(origin)
+{
+	level.holdround = true;
+	level.zombie_total = 0;
+	zombies = getaiarray( level.zombie_team );
+	foreach (i in zombies)
+	{
+		i dodamage(i.health,i.origin);
+	}
+
+	spawner = random( level.avogadro_spawners );
+	level.bossentity = spawn_boss( spawner, "avogadro", origin );
+	wait 1;
+	base = spawn( "script_model", (1443,-520,55) );
+	base setModel ("tag_origin");
+	level.bossentity unlink();
+	level.bossentity enableLinkTo();
+	level.bossentity.origin = origin;
+	level.bossentity linkto (base);
+	level.bossentity.maxhealth = 750000 + (150000 * level.players.size);
+	level.bossentity.health = level.bossentity.maxhealth;
+	level.bossentity thread boss_killed();
+	level.bossentity.spot = origin;
+	level.bossentity thread zombie_complete_emerging_into_playable_area();
+	zones = array("zone_bar","zone_tow","zone_ban","zone_ban_vault","zone_tbu","zone_town_barber","zone_town_south","zone_town_west","zone_town_east","zone_town_north");
+	foreach (player in level.players)
+	{
+		player thread boss_bar();
+		if(!player boss_zone_checker(zones))
+		{
+			player setplayerangles ((0,-93,0));
+			origin = (1550,581,-60);
+			x = origin[0] + randomintrange(-150,150);
+			y = origin[1] + randomintrange(-150,150);
+			z = origin[2];
+			player setorigin ((x,y,z));
+		}
+	}
+	level thread boss_cloud_update_fx();
+	level thread playbossmusic();
+	level.bossentity.isInvulnerable = 1;
+	level thread boss_out_of_bounds();
+	level thread boss_intro_quotes();
+	level.the_bus bus_power_off();
+	wait 22;
+	level thread forcerun();
+	earthquake( 1, 5, level.bossentity.origin, 3000 );
+	level.bossentity.isInvulnerable = 0;
+	level.bossentity thread boss_status();
+	level.bossentity thread boss_attacks();
+	level thread infinite_zombies();
+
+}
+
+players_are_near(origin, distance)
+{
+	num = 0;
+	foreach(player in level.players)
+	{
+		if(distance(player.origin, origin) < distance)
+		{
+			num += 1;
+		}
+	}
+	if(num == level.players.size)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+boss_intro_quotes()
+{
+	wait 2;
+	do_vox_subtitles("Entity", "I cant do anything! You must eliminate the distrubance!", 4, "vox_boss_start_1");
+	do_vox_subtitles("Avogadro", "Not so fast! Those humans trapped me in that lab!", 5, "vox_boss_start_2");
+	do_vox_subtitles("Avogadro", "Letting me out was a huge mistake!", 2, "vox_boss_start_3");
+	do_vox_subtitles("Avogadro", "Your lives end here! Once and for all!", 4, "vox_boss_start_4");
+}
+
+infinite_zombies()
+{
+	while(isDefined(level.bossentity))
+	{
+		level.zombie_total = 20;
+		wait 0.1;
+	}
+	level.zombie_total = 0;
+}
+
+create_boss_icon()
+{
+    height_offset = 30;
+    hud_elem = newhudelem();
+    hud_elem.x = self.origin[0];
+    hud_elem.y = self.origin[1];
+    hud_elem.z = self.origin[2] + height_offset;
+    hud_elem.alpha = 1;
+    hud_elem.archived = 1;
+    hud_elem setshader( "waypoint_revive", 5, 5 );
+    hud_elem setwaypoint( 1 );
+    hud_elem.hidewheninmenu = 1;
+    hud_elem.immunetodemogamehudsettings = 1;
+
+    while ( isDefined(level.bossentity) )
+    {
+        hud_elem.x = self.origin[0];
+        hud_elem.y = self.origin[1];
+        hud_elem.z = self.origin[2] + height_offset;
+        wait 0.01;
+    }
+	
+	hud_elem destroy();
+}
+
+spam_health()
+{
+	while(1)
+	{
+		foreach(player in level.players)
+		{
+//			player iprintln(level.bossentity.health + "/" + level.bossentity.maxhealth);
+			player iprintln(player.origin + " - " + player.angles);
+			player iprintln(get_minion_amount());
+		}
+		wait 1;
+	}
+}
+
+delete_zombie_noone_looking( how_close )
+{
+    self endon( "death" );
+
+    if ( !isdefined( how_close ) )
+        how_close = 1000;
+
+    distance_squared_check = how_close * how_close;
+    too_far_dist = distance_squared_check * 3;
+
+    if ( isdefined( level.zombie_tracking_too_far_dist ) )
+        too_far_dist = level.zombie_tracking_too_far_dist * level.zombie_tracking_too_far_dist;
+
+    self.inview = 0;
+    self.player_close = 0;
+    players = get_players();
+
+    for ( i = 0; i < players.size; i++ )
+    {
+        if ( players[i].sessionstate == "spectator" )
+            continue;
+
+        if ( isdefined( level.only_track_targeted_players ) )
+        {
+            if ( !isdefined( self.favoriteenemy ) || self.favoriteenemy != players[i] )
+                continue;
+        }
+
+        can_be_seen = self player_can_see_me( players[i] );
+
+        if ( can_be_seen && distancesquared( self.origin, players[i].origin ) < too_far_dist )
+            self.inview++;
+
+        if ( distancesquared( self.origin, players[i].origin ) < distance_squared_check )
+            self.player_close++;
+    }
+
+    wait 0.1;
+
+    if ( self.inview == 0 && self.player_close == 0 )
+    {
+        if ( !isdefined( self.animname ) || isdefined( self.animname ) && self.animname != "zombie" )
+            return;
+
+        if ( isdefined( self.electrified ) && self.electrified == 1 )
+            return;
+
+        if ( isdefined( self.in_the_ground ) && self.in_the_ground == 1 )
+            return;
+
+        zombies = getaiarray( "axis" );
+
+        if ( ( !isdefined( self.damagemod ) || self.damagemod == "MOD_UNKNOWN" ) && self.health < self.maxhealth )
+        {
+            if ( !( isdefined( self.exclude_distance_cleanup_adding_to_total ) && self.exclude_distance_cleanup_adding_to_total ) && !( isdefined( self.isscreecher ) && self.isscreecher ) )
+            {
+                if(self != level.bossentity)
+				{
+					level.zombie_total++;
+					level.zombie_respawned_health[level.zombie_respawned_health.size] = self.health;
+				}
+            }
+        }
+        else if ( zombies.size + level.zombie_total > 24 || zombies.size + level.zombie_total <= 24 && self.health >= self.maxhealth )
+        {
+            if ( !( isdefined( self.exclude_distance_cleanup_adding_to_total ) && self.exclude_distance_cleanup_adding_to_total ) && !( isdefined( self.isscreecher ) && self.isscreecher ) )
+            {
+                if(self != level.bossentity)
+				{
+					level.zombie_total++;
+				}
+
+                if ( self.health < level.zombie_health )
+                    level.zombie_respawned_health[level.zombie_respawned_health.size] = self.health;
+            }
+        }
+
+        self maps\mp\zombies\_zm_spawner::reset_attack_spot();
+		if(self != level.bossentity)
+		{
+			self notify( "zombie_delete" );
+			self delete();
+		}
+        recalc_zombie_array();
+    }
+}
+
+round_spawn_failsafe_new()
+{
+    self endon( "death" );
+    prevorigin = self.origin;
+
+    while ( true )
+    {
+        if ( !level.zombie_vars["zombie_use_failsafe"] )
+            return;
+
+        if ( isdefined( self.ignore_round_spawn_failsafe ) && self.ignore_round_spawn_failsafe )
+            return;
+
+        wait 30;
+
+        if ( !self.has_legs )
+            wait 10.0;
+
+        if ( isdefined( self.is_inert ) && self.is_inert )
+            continue;
+
+        if ( isdefined( self.lastchunk_destroy_time ) )
+        {
+            if ( gettime() - self.lastchunk_destroy_time < 8000 )
+                continue;
+        }
+
+        if ( self.origin[2] < level.zombie_vars["below_world_check"] )
+        {
+            if ( isdefined( level.put_timed_out_zombies_back_in_queue ) && level.put_timed_out_zombies_back_in_queue && !flag( "dog_round" ) && !( isdefined( self.isscreecher ) && self.isscreecher ) )
+            {
+                empty = 0;
+                //level.zombie_total++;
+                //level.zombie_total_subtract++;
+            }
+
+/#
+
+#/
+            empty = 0;
+            //self dodamage( self.health + 100, ( 0, 0, 0 ) );
+            break;
+        }
+
+        if ( distancesquared( self.origin, prevorigin ) < 576 )
+        {
+            if ( isdefined( level.put_timed_out_zombies_back_in_queue ) && level.put_timed_out_zombies_back_in_queue && !flag( "dog_round" ) )
+            {
+                if ( !self.ignoreall && !( isdefined( self.nuked ) && self.nuked ) && !( isdefined( self.marked_for_death ) && self.marked_for_death ) && !( isdefined( self.isscreecher ) && self.isscreecher ) && ( isdefined( self.has_legs ) && self.has_legs ) )
+                {
+                    empty = 0;
+                    //level.zombie_total++;
+                    //level.zombie_total_subtract++;
+                }
+            }
+
+            level.zombies_timeout_playspace++;
+/#
+
+#/
+            empty = 0;
+            //self dodamage( self.health + 100, ( 0, 0, 0 ) );
+            break;
+        }
+
+        prevorigin = self.origin;
+    }
+}
+
+
+boss_bar()
+{
+	health_bar = self createbar((1, 0, 0), level.secondaryprogressbarwidth * 2, level.secondaryprogressbarheight);
+	health_bar setpoint("top", undefined, 0, -175);
+	health_bar.hidewheninmenu = 1;
+	health_bar.bar.hidewheninmenu = 1;
+	health_bar.barframe.hidewheninmenu = 1;
+	health_bar.alpha = 1;
+	
+	health_bar.foreground = 1;
+	health_bar.barframe.background = 1;
+	health_bar.bar.foreground = 1;
+	
+	health_bar_text = self createprimaryprogressbartext();
+	health_bar_text setpoint("top", undefined, 0, -165);
+	health_bar_text.hidewheninmenu = 1;
+	health_bar_text.fontscale = 1;
+	health_bar_text.foreground = 1;
+	
+	health_bar_text setText(level.bossentity.displayname);
+	
+	while(isDefined(level.bossentity))
+	{
+		health_bar updatebar(level.bossentity.health / level.bossentity.maxhealth);
+		
+		if(level.bossentity.isInvulnerable == 1)
+		{
+			health_bar.bar.color = (0,0,1);
+		}
+		else
+		{
+			health_bar.bar.color = (1,1,1);
+		}
+		
+		if(level.intermission)
+		{
+			health_bar.alpha = 0;
+			health_bar_text.alpha = 0;
+			health_bar.barframe.alpha = 0;
+			health_bar.bar.alpha = 0;
+		}
+		
+		wait 0.01;
+	}
+	health_bar.bar destroy();
+	health_bar.barframe destroy();
+	health_bar destroy();
+	health_bar_text destroy();
+	
+}
+
+set_boss_anims()
+{
+	wait 2;
+	self traversemode( "gravity" );
+	self.ignore_all_poi = 1;
+	self.is_traversing = 0;
+	level.bossentity.origin = level.bossentity.spot;
+    self.state = "chamber";
+    self setanimstatefromasd( "zm_chamber_idle" );
+	wait 1;
+	self stopanimscripted();
+}
+
+boss_attacks()
+{
+	level endon("boss_died");
+	while(1)
+	{
+		boss_range_attack( get_random_player() );
+		wait 9;
+	}
+}
+
+get_random_player()
+{
+	result = [];
+	foreach (player in level.players)
+	{
+		result[result.size] = player;
+	}
+	return random(result);
+}
+
+boss_range_attack(enemy)
+{
+    if ( isdefined( enemy ) )
+    {
+        self thread shoot_bolt_wait( "ranged_attack", enemy );
+        self show();
+        self animscripted( self.origin, self.angles, "zm_ranged_attack_in" );
+        maps\mp\animscripts\zm_shared::donotetracks( "ranged_attack" );
+        self animscripted( self.origin, self.angles, "zm_ranged_attack_loop" );
+        maps\mp\animscripts\zm_shared::donotetracks( "ranged_attack" );
+        self animscripted( self.origin, self.angles, "zm_ranged_attack_out" );
+        maps\mp\animscripts\zm_shared::donotetracks( "ranged_attack" );
+		self setanimstatefromasd( "zm_chamber_idle" );
+    }
+}
+
+shoot_bolt_wait( animname, enemy )
+{
+    self endon( "melee_pain" );
+    self waittillmatch( animname, "fire" );
+    self.shield = 0;
+    self notify( "stop_health" );
+
+    if ( isdefined( self.health_fx ) )
+    {
+        self.health_fx unlink();
+        self.health_fx delete();
+    }
+
+    self thread shoot_bolt( enemy );
+	earthquake( 0.7, 1, self.origin, 1500 );
+}
+
+minion_round_watcher()
+{
+	level endon ("boss_died");
+	randomnum = level.round_number + 1;
+	loops = 0;
+	for(;;)
+	{
+		level waittill ("between_round_over");
+		if(level.round_number == randomnum)
+		{
+			loops += 1;
+			spawn_regular_minion(loops);
+			randomnum = level.round_number + randomintrange(3,5);
+		}
+	}
+}
+
+spawn_regular_minion(times)
+{
+	minionslist = [];
+	
+	for( i = 0; i < times; i++ )
+	{
+		spawner = random( level.zombie_spawners );
+		ai = spawn_boss_minion( spawner, "zombie", spawner.origin );
+		ai thread minion_dies();
+		ai set_zombie_run_cycle("sprint");
+		ai.isminion = true;
+		level.zombie_total--;
+		minionslist[minionslist.size] = ai;
+	}
+	
+	wait 1;
+	
+	foreach(minion in minionslist)
+	{
+		minion.maxhealth = 5000;
+		minion.health = minion.maxhealth;
+		minion.is_on_fire = true;
+	}
+}
+
+boss_status()
+{
+	max_phase = 4;
+	phase_bar = level.bossentity.maxhealth / 4;
+	halfsies = int(max_phase / 2);
+	phase = 1;
+	self.isInvulnerable = 0;
+	self thread loop_shock_line_fx();
+
+	
+	while(1)
+	{
+		if(max_phase != phase)
+		{
+			if(level.bossentity.health <= phase_bar * (max_phase - phase))
+			{
+				self playsound( "zmb_avogadro_pain" );
+				self.isInvulnerable = 1;
+				self playsound( "zmb_avogadro_warp_out" );
+				level thread spawn_wave_minions(phase);
+				level.bossentity thread phase_watch();
+				level waittill ("minions_eliminated");
+				if(phase == halfsies)
+				{
+					level thread maps\mp\zombies\_zm_powerups::specific_powerup_drop("full_ammo", (1446.1, -121.101, -61.875));
+				}
+				phase += 1;
+			}
+		}
+		wait 0.1;
+	}
+}
+
+phase_watch()
+{
+	wait 1;
+	while(get_minion_amount() > 0)
+	{
+		wait 1;
+	}
+	level notify ("minions_eliminated");
+	self playsound( "zmb_avogadro_warp_out" );
+	self.isInvulnerable = 0;
+	self disableInvulnerability();
+
+}
+
+actor_damage_override( inflictor, attacker, damage, flags, meansofdeath, weapon, vpoint, vdir, shitloc, psoffsettime, boneindex )
+{
+    if ( !isdefined( self ) || !isdefined( attacker ) )
+        return damage;
+		
+	if( isDefined(self.isInvulnerable) && self.isInvulnerable == 1)
+		return 0;
+
+    if ( weapon == "tazer_knuckles_zm" || weapon == "jetgun_zm" )
+        self.knuckles_extinguish_flames = 1;
+    else if ( weapon != "none" )
+        self.knuckles_extinguish_flames = undefined;
+
+    if ( isdefined( attacker.animname ) && attacker.animname == "quad_zombie" )
+    {
+        if ( isdefined( self.animname ) && self.animname == "quad_zombie" )
+            return 0;
+    }
+
+    if ( !isplayer( attacker ) && isdefined( self.non_attacker_func ) )
+    {
+        if ( isdefined( self.non_attack_func_takes_attacker ) && self.non_attack_func_takes_attacker )
+            return self [[ self.non_attacker_func ]]( damage, weapon, attacker );
+        else
+            return self [[ self.non_attacker_func ]]( damage, weapon );
+    }
+
+    if ( !isplayer( attacker ) && !isplayer( self ) )
+        return damage;
+
+    if ( !isdefined( damage ) || !isdefined( meansofdeath ) )
+        return damage;
+
+    if ( meansofdeath == "" )
+        return damage;
+
+    old_damage = damage;
+    final_damage = damage;
+
+    if ( isdefined( self.actor_damage_func ) )
+        final_damage = [[ self.actor_damage_func ]]( inflictor, attacker, damage, flags, meansofdeath, weapon, vpoint, vdir, shitloc, psoffsettime, boneindex );
+
+/#
+    if ( getdvarint( #"scr_perkdebug" ) )
+        println( "Perk/> Damage Factor: " + final_damage / old_damage + " - Pre Damage: " + old_damage + " - Post Damage: " + final_damage );
+#/
+
+    if ( attacker.classname == "script_vehicle" && isdefined( attacker.owner ) )
+        attacker = attacker.owner;
+
+    if ( isdefined( self.in_water ) && self.in_water )
+    {
+        if ( int( final_damage ) >= self.health )
+            self.water_damage = 1;
+    }
+
+    attacker thread maps\mp\gametypes_zm\_weapons::checkhit( weapon );
+
+    if ( attacker maps\mp\zombies\_zm_pers_upgrades_functions::pers_mulit_kill_headshot_active() && is_headshot( weapon, shitloc, meansofdeath ) )
+        final_damage = final_damage * 2;
+
+    if ( isdefined( level.headshots_only ) && level.headshots_only && isdefined( attacker ) && isplayer( attacker ) )
+    {
+        if ( meansofdeath == "MOD_MELEE" && ( shitloc == "head" || shitloc == "helmet" ) )
+            return int( final_damage );
+
+        if ( is_explosive_damage( meansofdeath ) )
+            return int( final_damage );
+        else if ( !is_headshot( weapon, shitloc, meansofdeath ) )
+            return 0;
+    }
+
+    return int( final_damage );
+}
+
+
+avogadro_prespawn()
+{
+    if(isDefined(level.bossstarted) && level.bossstarted == 1)
+		return;
+	
+	self endon( "death" );
+    level endon( "intermission" );
+    level.avogadro = self;
+    self.has_legs = 1;
+    self.no_gib = 1;
+    self.is_avogadro = 1;
+    self.ignore_enemy_count = 1;
+    recalc_zombie_array();
+    self.ignore_nuke = 1;
+    self.ignore_lava_damage = 1;
+    self.ignore_devgui_death = 1;
+    self.ignore_electric_trap = 1;
+    self.ignore_game_over_death = 1;
+    self.ignore_enemyoverride = 1;
+    self.ignore_solo_last_stand = 1;
+    self.ignore_riotshield = 1;
+    self.allowpain = 0;
+    self.core_model = getent( "core_model", "targetname" );
+
+    if ( isdefined( self.core_model ) )
+    {
+        if ( !isdefined( self.core_model.angles ) )
+            self.core_model.angles = ( 0, 0, 0 );
+
+        self forceteleport( self.core_model.origin, self.core_model.angles );
+    }
+
+    self set_zombie_run_cycle( "walk" );
+    self animmode( "normal" );
+    self orientmode( "face enemy" );
+    self maps\mp\zombies\_zm_spawner::zombie_setup_attack_properties();
+    self maps\mp\zombies\_zm_spawner::zombie_complete_emerging_into_playable_area();
+    self setfreecameralockonallowed( 0 );
+    self.zmb_vocals_attack = "zmb_vocals_zombie_attack";
+    self.meleedamage = 5;
+    self.actor_damage_func = ::avogadro_damage_func;
+    self.non_attacker_func = ::avogadro_non_attacker;
+    self.anchor = spawn( "script_origin", self.origin );
+    self.anchor.angles = self.angles;
+    self.phase_time = 0;
+    self.audio_loop_ent = spawn( "script_origin", self.origin );
+    self.audio_loop_ent linkto( self, "tag_origin" );
+    self.hit_by_melee = 0;
+    self.damage_absorbed = 0;
+    self.ignoreall = 1;
+    self.zombie_init_done = 1;
+    self notify( "zombie_init_done" );
+    self.stun_zombie = ::stun_avogadro;
+    self.jetgun_fling_func = ::fling_avogadro;
+    self.jetgun_drag_func = ::drag_avogadro;
+    self.depot_lava_pit = ::busplowkillzombie;
+    self.busplowkillzombie = ::busplowkillzombie;
+    self.region_timer = gettime() + 500;
+    self.shield = 1;
+}
+
+boss_killed()
+{
+    self waittill ("death");
+	level notify ("boss_died");
+	level.zombie_total = 0;
+	zombies = getaiarray( level.zombie_team );
+	foreach (i in zombies)
+	{
+		i dodamage(i.health,i.origin);
+	}
+	earthquake( 1, 10, self.origin, 5000 );
+	thread nuke_flash(5);
+    self playsound( "zmb_avogadro_death" );
+    playfx( level._effect["avogadro_ascend"], self.origin );
+    self.deathanim = "zm_exit";
+	wait 5;
+	self delete();
+	
+	do_vox_subtitles("Entity", "That Avogadro had powers that prevented me from intercepting...", 4, "vox_boss_end_1");
+	do_vox_subtitles("Entity", "How did he get such power? No matter, its dealt with now.", 6, "vox_boss_end_2");
+	
+	level.holdround = false;
+
+	level.completedmodmainquest = true;
+	if(getDvarInt("continue_game_after_quest") == 1)
+	{
+		level thread spawnRewards((1446.1, -121.101, -61.875));
+		level.the_bus bus_power_on();
+		foreach (player in level.players)
+		{
+			player thread give_player_all_perks();
+		}
+	}
+	else
+	{
+		level notify ("end_game");
+	}
+}
+
+boss_cloud_update_fx()
+{
+	self endon( "cloud_fx_end" );
+	level endon( "end_game" );
+	region = [];
+	region[ 0 ] = "town";
+	self.current_region = undefined;
+	if ( !isDefined( self.sndent ) )
+	{
+		self.sndent = spawn( "script_origin", ( 0, 0, 1 ) );
+		self.sndent playloopsound( "zmb_avogadro_thunder_overhead" );
+	}
+	cloud_time = getTime();
+	vo_counter = 0;
+	while ( 1 )
+	{
+		if ( getTime() >= cloud_time )
+		{
+			if ( isDefined( self.current_region ) )
+			{
+				exploder_num = level.transit_region[ self.current_region ].exploder;
+				stop_exploder( exploder_num );
+			}
+			rand_region = array_randomize( region );
+			region_str = rand_region[ 0 ];
+			if ( !isDefined( self.current_region ) )
+			{
+				region_str = region[ 0 ];
+			}
+			idx = 0;
+			if ( idx >= 0 )
+			{
+				region_str = region[ idx ];
+			}
+			avogadro_print( "clouds in region " + region_str );
+			self.current_region = region_str;
+			exploder_num = level.transit_region[ region_str ].exploder;
+			exploder( exploder_num );
+			self.sndent moveto( level.transit_region[ region_str ].sndorigin, 3 );
+			cloud_time = getTime() + 30000;
+		}
+		if ( vo_counter > 50 )
+		{
+			player = self get_player_in_region();
+			if ( isDefined( player ) )
+			{
+				if ( isDefined( self._in_cloud ) && self._in_cloud )
+				{
+					player thread do_player_general_vox( "general", "avogadro_above", 90, 10 );
+				}
+				else
+				{
+					player thread do_player_general_vox( "general", "avogadro_arrive", 60, 40 );
+				}
+			}
+			else
+			{
+				level thread avogadro_storm_vox();
+			}
+			vo_counter = 0;
+		}
+		wait 0.1;
+		vo_counter++;
+	}
+}
+
+spawn_boss_minion( spawner, target_name, spawn_point, round_number, origin )
+{
+    if ( !isdefined( spawner ) )
+    {
+/#
+        println( "ZM >> spawn_zombie - NO SPAWNER DEFINED" );
+#/
+        return undefined;
+    }
+
+    while ( getfreeactorcount() < 1 )
+        wait 0.05;
+
+    spawner.script_moveoverride = 1;
+
+    if ( isdefined( spawner.script_forcespawn ) && spawner.script_forcespawn )
+    {
+        guy = spawner spawnactor();
+
+        if ( isdefined( level.giveextrazombies ) )
+            guy [[ level.giveextrazombies ]]();
+
+        guy enableaimassist();
+
+        if ( isdefined( round_number ) )
+            guy._starting_round_number = round_number;
+
+        guy.aiteam = level.zombie_team;
+        guy clearentityowner();
+        level.zombiemeleeplayercounter = 0;
+        guy thread run_spawn_functions();
+        guy.origin = origin;
+        guy show();
+		guy setmodel( "c_zom_avagadro_fb" );
+		guy.isminion = 1;
+		
+    }
+
+    spawner.count = 666;
+
+    if ( !spawn_failed( guy ) )
+    {
+        if ( isdefined( target_name ) )
+            guy.targetname = target_name;
+
+        return guy;
+    }
+
+    return undefined;
+}
+
+spawn_wave_minions(phase)
+{
+	level.minionslist = [];
+
+	for( i = 0; i < 8; i++ )
+	{
+		spawner = random( level.zombie_spawners );
+		ai = spawn_boss_minion( spawner, "zombie", spawner.origin );
+		ai thread minion_dies();
+		ai.isminion = true;
+		ai set_zombie_run_cycle("sprint");
+		level.zombie_total--;
+		level.minionslist[level.minionslist.size] = ai;
+	}
+	
+	wait 1;
+	
+	foreach(minion in level.minionslist)
+	{
+		minion.maxhealth = 5000;
+		minion.health = minion.maxhealth;
+		minion.is_on_fire = true;
+	}
+	
+	level notify ("finished_spawning_minions");
+	
+	if(phase == 1)
+	{
+		do_vox_subtitles("Avogadro", "Minions! Come on out!", 3, "vox_boss_minions");
+	}
+}
+
+get_minion_amount()
+{
+	num = 0;
+	
+	foreach (i in level.minionslist)
+	{
+		if(isAlive(i))
+		{
+			num += 1;
+		}
+	}
+	
+	return num;
+}
+
+shock_line_fx( entity )
+{
+    source_pos = self gettagorigin( "tag_weapon_right" );
+    target_pos = entity geteye();
+    bolt = spawn( "script_model", source_pos );
+    bolt setmodel( "tag_origin" );
+    wait 0.1;
+    self playsound( "zmb_avogadro_attack" );
+    fx = playfxontag( level._effect["avogadro_bolt"], bolt, "tag_origin" );
+    bolt moveto( target_pos, 0.2 );
+    bolt waittill( "movedone" );
+    bolt.owner = self;
+    bolt delete();
+}
+
+shock_fx()
+{
+	maps\mp\_visionset_mgr::vsmgr_activate( "overlay", "zm_ai_avogadro_electrified", self, 1, 1 );
+	self shellshock( "electrocution", 1 );
+	self playsoundtoplayer( "zmb_avogadro_electrified", self );
+	self dodamage( 10, self.origin );
+}
+
+loop_shock_line_fx()
+{
+	level endon ("boss_died");
+	
+	for(;;)
+	{
+		zombies = getAIArray( level.zombie_team );
+		foreach (i in zombies)
+		{
+			if(isAlive(i) && (isDefined(i.isminion) && i.isminion == 1) && level.bossentity.isInvulnerable == 1)
+			{
+				level.bossentity thread shock_line_fx( i );
+			}
+		}
+		wait 1.5;
+	}
+}
+
+playbossmusic()
+{
+    ent = spawn( "script_origin", ( 0, 0, 0 ) );
+	ent playloopsound ("mus_transitfight_intro");
+	wait 22;
+    ent thread stopbossmusic();
+	ent playloopsound( "mus_transitfight_loop", 0.1 );
+}
+
+stopbossmusic()
+{
+    level waittill_any( "boss_died", "end_game" );
+    self stoploopsound( 1.5 );
+    wait 1;
+	self playloopsound ("mus_transitfight_outro");
+	wait 21;
+	self stoploopsound( 1.5 );
+	wait 2;
+    self delete();
+}
+
+loop_bossStartFX(origin)
+{
+	while(level.bossstarted != 1)
+	{
+		playfx( level._effect["avogadro_phasing"], self.origin + (0,0,-20) );
+		wait 2;
+	}
+}
+
+spawnBossStart()
+{
+	bossStartTrigger = spawn( "trigger_radius", ((1765.37, -88.9562, -33.9563)), 1, 50, 50 );
+	bossStartTrigger setHintString("Press ^3&&1 ^7to investigate the disturbance \n[Final Encounter] All Players need to be nearby.");
+	bossStartTrigger setcursorhint( "HINT_NOICON" );
+	bossStartModel = spawn( "script_model", ((1765.37, -88.9562, -33.9563)));
+	bossStartModel setmodel ("p6_zm_bu_sq_crystal");
+	angle = randomintrange(0,180);
+	bossStartModel rotateTo((0,167.966,0),.1);
+	
+	bossStartTrigger thread loop_bossStartFX();
+
+	bossStartModel thread loop_boss_model();
+
+	for(;;)
+	{
+		bossStartTrigger waittill( "trigger", i );
+			
+		if ( i usebuttonpressed() )
+		{
+			if(players_are_near(bossStartTrigger.origin, 100))
+			{
+				level.bossstarted = 1;
+				level thread force_spawn_boss((1443,-520,55));
+				thread nuke_flash(3);
+				bossStartTrigger delete();
+				bossStartModel delete();
+			}
+			else
+			{
+				notify_player_action(i.name + " wants to initiate the final encounter!");
+			}
+		}
+		wait 0.1;
+	}
+}
+
+minion_dies()
+{
+	self waittill ("death", attacker);
+	playfx(level._effect["turbine_aoe"], self.origin);
+	self playsound ("wpn_emp_bomb_static_start");
+	if(isplayer(attacker))
+	{
+		foreach (player in level.players)
+		{
+			if(distance(self.origin, player.origin) <= 100)
+			{
+				player thread shock_fx();
+			}
+		}
+	}
+	self delete();
+}
+
+loop_boss_model()
+{
+	while(level.bossstarted != 1)
+	{
+		self moveto(self.origin + (0,0,20),1.5);
+		self waittill("movedone");
+		self moveto(self.origin + (0,0,-20),3.5);
+		self waittill("movedone");
+	}
+}
+
+boss_out_of_bounds()
+{
+	level endon ("boss_died");
+	zones = array("zone_bar","zone_tow","zone_ban","zone_ban_vault","zone_tbu","zone_town_barber","zone_town_south","zone_town_west","zone_town_east","zone_town_north");
+	
+	for(;;)
+	{
+		foreach (player in level.players)
+		{
+
+			if(!player boss_zone_checker(zones))
+			{
+				maps\mp\_visionset_mgr::vsmgr_activate( "overlay", "zm_ai_avogadro_electrified", player, 1, 1 );
+				player shellshock( "electrocution", 1 );
+				player playsoundtoplayer( "zmb_avogadro_electrified", player );
+				player dodamage( 40, player.origin );				
+			}
+		}
+		wait 2;
+	}
+}
+
+boss_zone_checker(zones)
+{
+	foreach(zone in zones)
+	{
+		if(self get_current_zone() == zone)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+do_gib_new()
+{
+    if ( !is_mature() )
+        return;
+
+    if ( !isdefined( self.a.gib_ref ) )
+        return;
+
+    if ( isdefined( self.is_on_fire ) && self.is_on_fire )
+        return;
+
+    if ( self is_zombie_gibbed() )
+        return;
+		
+	if ( self.isminion == true )
+		return;
+
+    self set_zombie_gibbed();
+    gib_ref = self.a.gib_ref;
+    limb_data = get_limb_data( gib_ref );
+
+    if ( !isdefined( limb_data ) )
+    {
+/#
+        println( "^3animscriptszm_death.gsc - limb_data is not setup for gib_ref on model: " + self.model + " and gib_ref of: " + self.a.gib_ref );
+#/
+        return;
+    }
+
+    if ( !( isdefined( self.dont_throw_gib ) && self.dont_throw_gib ) )
+        self thread throw_gib( limb_data["spawn_tags_array"] );
+
+    if ( gib_ref == "head" )
+    {
+        self.hat_gibbed = 1;
+        self.head_gibbed = 1;
+        size = self getattachsize();
+
+        for ( i = 0; i < size; i++ )
+        {
+            model = self getattachmodelname( i );
+
+            if ( issubstr( model, "head" ) )
+            {
+                if ( isdefined( self.hatmodel ) )
+                    self detach( self.hatmodel, "" );
+
+                self detach( model, "" );
+
+                if ( isdefined( self.torsodmg5 ) )
+                    self attach( self.torsodmg5, "", 1 );
+
+                break;
+            }
+        }
+    }
+    else
+    {
+        self setmodel( limb_data["body_model"] );
+        self attach( limb_data["legs_model"] );
+    }
 }

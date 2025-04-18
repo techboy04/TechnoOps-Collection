@@ -17,6 +17,12 @@ image,~-gzombie_teddybear_c
 material,mc/mtl_prop_bear
 xmodel,zombie_teddybear
 
+image,~~-gp6_zm_al_audio_headset_ic~99b88c22
+image,p6_zm_al_audio_headset_icon_n
+image,~-gp6_zm_al_audio_headset_icon_d
+material,mc/mtl_p6_zm_al_audio_headset_icon
+xmodel,p6_zm_al_audio_headset_icon
+
 xmodel,zombie_z_money_icon
 image,specialty_2x_zombies
 image,specialty_firesale_zombies

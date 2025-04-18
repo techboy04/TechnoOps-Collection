@@ -403,6 +403,12 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "enable_9lives") == "" then
 		Engine.Exec(nil, "seta enable_9lives 0")
 	end
+	if UIExpression.DvarString(nil, "continue_game_after_quest") == "" then
+		Engine.Exec(nil, "seta continue_game_after_quest 1")
+	end
+	if UIExpression.DvarString(nil, "cnotify_players_actions") == "" then
+		Engine.Exec(nil, "seta notify_players_actions 0")
+	end	
 end
 
 LUI.createMenu.main = function()

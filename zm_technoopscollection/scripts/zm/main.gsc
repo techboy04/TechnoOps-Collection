@@ -42,6 +42,8 @@ main()
 	precacheshader("specialty_unlimitedammo_zombies");
 	precacheshader("specialty_timefreeze_zombies");
 	
+	precachemodel("p6_zm_al_audio_headset_icon");
+	
 	precachemodel("zombie_sign_please_wait");
 	precachemodel("zombie_skull");
 	
@@ -155,6 +157,7 @@ init()
     level thread betaMessage();
     level thread command_thread();
     level thread updateSomeSettings();
+	level removebarriers();
     
 	precacheshader("riotshield_zm_icon");
 	precacheshader("zm_riotshield_tomb_icon");
@@ -812,6 +815,10 @@ init_dvars()
 	create_dvar("planeparts_per_player", 0);
 	
 	create_dvar("enable_9lives", 0);
+	
+	create_dvar("continue_game_after_quest", 1);
+	
+	create_dvar("notify_players_actions", 0);
 }
 
 init_player_things()
@@ -954,16 +961,10 @@ change_zombies_speed(speedtoset){
     }
 }
 
-nuke_flash( team )
+nuke_flash( duration )
 {
-	if ( isDefined( team ) )
-	{
-		get_players()[ 0 ] playsoundtoteam( "evt_nuke_flash", team );
-	}
-	else
-	{
-		get_players()[ 0 ] playsound( "evt_nuke_flash" );
-	}
+	get_players()[ 0 ] playsound( "evt_nuke_flash" );
+
 	fadetowhite = newhudelem();
 	fadetowhite.x = 0;
 	fadetowhite.y = 0;
@@ -974,7 +975,14 @@ nuke_flash( team )
 	fadetowhite setshader( "white", 640, 480 );
 	fadetowhite fadeovertime( 0.2 );
 	fadetowhite.alpha = 0.8;
-	wait 1;
+	if(isDefined(duration))
+	{
+		wait duration;
+	}
+	else
+	{
+		wait 1;
+	}
 	fadetowhite fadeovertime( 1 );
 	fadetowhite.alpha = 0;
 	wait 1.1;
@@ -1476,6 +1484,7 @@ spawnShovel(x,y,z,angle)
 			i playlocalsound( "fly_equipment_pickup_plr" );
 			level.hasshovel = true;
 			level notify ("pickedup_ee_shovel");
+			notify_player_action(i.name + " picked up a shovel");
 			shovelModel delete();
 			shovelTrigger delete();
 			break;
@@ -5058,8 +5067,11 @@ hitmark()
     for(;;)
     {
         self waittill( "damage", amount, attacker, dir, point, mod );
-        attacker.hitmarker.alpha = 0;
-        if( isplayer( attacker ) )
+		if(isDefined(attacker.hitmarker))
+		{
+			attacker.hitmarker.alpha = 0;
+        }
+		if( isplayer( attacker ) )
         {
             if( isalive( self ))
             {
@@ -5973,17 +5985,37 @@ spawnTeddyBear(x,y,z,angle)
 		TeddyTrigger waittill( "trigger", i );
 		if ( i usebuttonpressed() )
 		{
-			i.teddybears += 1;
-			i playlocalsound( "zmb_meteor_activate" );
-			
-			if (i.teddybears == 3) 
+			if(!isDefined(i.collectedbears))
 			{
-				i playlocalsound("mus_zmb_secret_song");
+				i.collectedbears = [];
 			}
 			
-			break;
+			if(!i if_player_already_collected(TeddyTrigger))
+			{
+				i.teddybears += 1;
+				i.collectedbears[i.collectedbears.size] = TeddyTrigger;
+				i playlocalsound( "zmb_meteor_activate" );
+			
+				if (i.teddybears == 3) 
+				{
+					i playlocalsound("mus_zmb_secret_song");
+				}
+			}
+		}
+		wait 0.1;
+	}
+}
+
+if_player_already_collected(bear)
+{
+	foreach(bears in self.collectedbears)
+	{
+		if(bears == bear)
+		{
+			return true;
 		}
 	}
+	return false;
 }
 
 setteddybears()
@@ -6193,7 +6225,7 @@ createTravel(location, destination, angle, whereto)
 				{
 					i.score -= getdvarInt("fasttravel_price");
 					i playlocalsound( "zmb_weap_wall" );
-					fadetowhite = newhudelem();
+					fadetowhite = newClientHudElem(i);
 					fadetowhite.x = 0;
 					fadetowhite.y = 0;
 					fadetowhite.alpha = 0;
@@ -8795,7 +8827,7 @@ sendsubtitletext(charactername, team, text, audio, time)
     	self.subtitleText.fontscale = 1.5;
     	self.subtitleText.y = 0;
     
-    	self.subtitleText.foreground = 1;
+    	self.subtitleText.foreground = 0;
     	self.subtitleText.alpha = 0;
     	self.subtitleText.hidewheninmenu = 1;
     	self.subtitleText.font = "default";
@@ -14569,5 +14601,110 @@ deadlight_zombies()
 			}
 		}
 		wait 0.1;
+	}
+}
+
+removebarriers()
+{
+    currentMap = getDvar( "mapname" );
+    
+    switch ( currentMap )
+    {
+        case "zm_prison": //Your Map Name
+            moveTrigger( 0 ); // Lower/Higher
+        break;
+	}
+}
+
+movetrigger(z)
+{
+    if(!isdefined(z) || isdefined(level.barriersdone))
+    {
+        return;
+    }
+    level.barriersdone = 1;
+    trigger = getentarray("trigger_hurt", "classname");
+    for(i = 0; i < trigger.size; i++)
+    {
+        if(trigger[i].origin[2] < self.origin[2])
+        {
+            trigger[i].origin = trigger[i].origin - (0, 0, z);
+        }
+    }
+}
+
+custom_secret_song_spawns(locationarray, anglearray, secretsong, model)
+{
+	for(i = 0; i < locationarray.size; i++)
+	{
+		level thread custom_secret_song_activator(locationarray[i], anglearray[i], secretsong, model);
+	}
+}
+
+custom_secret_song_activator(origin, angle, secretsong, model)
+{
+	if(!isDefined(model))
+	{
+		model = "p6_zm_al_audio_headset_icon";
+		angle += 90;
+	}
+	
+	facingdown = -90;
+
+	TeddyTrigger = spawn( "trigger_radius", (origin), 1, 50, 50 );
+	TeddyModel = spawn( "script_model", (origin), 1, 50, 50 );
+	TeddyModel setmodel(model);
+	TeddyModel rotateto((0,angle,facingdown),.1);
+
+	for(;;)
+	{
+		TeddyTrigger waittill( "trigger", i );
+		if ( i usebuttonpressed() )
+		{
+			if(!isDefined(i.customcollectedbears))
+			{
+				i.customcollectedbears = [];
+			}
+			
+			if(!i if_player_already_collected_custom(TeddyTrigger))
+			{
+				i.customcollectedbears[i.customcollectedbears.size] = TeddyTrigger;
+				i playlocalsound( "zmb_custom_teddy_activate" );
+			
+				if (i.customcollectedbears.size == 3) 
+				{
+					i playlocalsound(secretsong);
+				}
+			}
+		}
+		wait 0.1;
+	}
+}
+
+if_player_already_collected_custom(bear)
+{
+	foreach(bears in self.customcollectedbears)
+	{
+		if(bears == bear)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+notify_player_action(message)
+{
+	if(getDvarInt("notify_players_actions") == 0)
+	{
+		return;
+	}
+	
+	if(level.players.size > 1 && getDvarInt("notify_players_actions") == 1)
+	{
+		foreach (player in level.players)
+		{
+			player iprintln(message);
+		}
 	}
 }
