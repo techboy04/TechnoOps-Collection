@@ -1,5 +1,6 @@
 echo off
-set MOD_NAME=zm_technoopscollection
+Import-Module BurntToast
+set MOD_NAME=zm_technoopscollection_test
 set GAME_FOLDER=C:\Program Files (x86)\Steam\steamapps\common\Call of Duty Black Ops II
 set OAT_BASE=C:\OAT
 set MOD_BASE=%cd%
@@ -35,8 +36,10 @@ XCOPY "%MOD_BASE%\mod.json" "%LOCALAPPDATA%\Plutonium\storage\t6\mods\%MOD_NAME%
 XCOPY "%MOD_BASE%\images.iwd" "%LOCALAPPDATA%\Plutonium\storage\t6\mods\%MOD_NAME%\images.iwd" /Y
 XCOPY "%MOD_BASE%\zone\mod.all.sabs" "%LOCALAPPDATA%\Plutonium\storage\t6\mods\%MOD_NAME%\mod.all.sabs" /Y
 XCOPY "%MOD_BASE%\zone\mod.all.sabl" "%LOCALAPPDATA%\Plutonium\storage\t6\mods\%MOD_NAME%\mod.all.sabl" /Y
+New-BurntToastNotification -Text "Mod Successfully Built!"
 ) ELSE (
 COLOR C
 echo FAIL!
+New-BurntToastNotification -Text "Mod Building Failed!"
+PAUSE
 )
-pause

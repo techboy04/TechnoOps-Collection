@@ -22,6 +22,7 @@
 #include maps\mp\zombies\_zm_ai_basic;
 #include maps\mp\zm_tranzit;
 #include scripts\zm\main;
+#include maps\mp\zm_transit_sq;
 
 
 main()
@@ -30,9 +31,8 @@ main()
 	replaceFunc(maps\mp\zombies\_zm_ai_avogadro::cloud_update_fx, ::custom_cloud_update_fx);
 	replacefunc(maps\mp\zm_transit_sq::richtofen_sidequest_a, ::richtofen_sidequest_a_new);
 	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
-//	replacefunc(maps\mp\zm_transit::assign_lowest_unused_character_index, ::assign_lowest_unused_character_index);
-//	replacefunc(maps\mp\zm_transit::give_personality_characters, ::give_personality_characters);
 	replacefunc(maps\mp\zm_transit::include_equipment_for_level, ::include_equipment_for_level);
+//	replaceFunc(maps\mp\zm_transit_sq::richtofen_sidequest_c, ::custom_richtofen_sidequest_c);
 
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)
 	{
@@ -806,4 +806,45 @@ get_current_spectating_player()
 	}
 
 	return self;
+}
+
+custom_richtofen_sidequest_c()
+{
+	level endon( "power_off" );
+	level endon( "richtofen_sq_complete" );
+	setDvar( "scr_screecher_ignore_player", 0 );
+	screech_zones = getstructarray( "screecher_escape", "targetname" );
+	level thread screecher_light_hint();
+	level thread screecher_light_on_sq();
+	level.sq_richtofen_c_screecher_lights = [];
+	while ( 1 )
+	{
+		level waittill( "safety_light_power_off", screecher_zone );
+		while ( !level.sq_progress[ "rich" ][ "A_complete" ] || !level.sq_progress[ "rich" ][ "B_complete" ] )
+		{
+			level thread richtofensay( "vox_zmba_sidequest_emp_nomag_0" );
+		}
+		level.sq_richtofen_c_screecher_lights[ level.sq_richtofen_c_screecher_lights.size ] = screecher_zone;
+		level.sq_progress[ "rich" ][ "C_screecher_light" ]++;
+		if ( level.sq_progress[ "rich" ][ "C_screecher_light" ] >= level.player.size )
+		{
+			break;
+		}
+		else
+		{
+			if ( isDefined( level.checking_for_richtofen_c_failure ) && !level.checking_for_richtofen_c_failure )
+			{
+				level thread check_for_richtofen_c_failure();
+			}
+		}
+	}
+	level thread richtofensay( "vox_zmba_sidequest_4emp_mag_0" );
+	level notify( "richtofen_c_complete" );
+	if (getDvarInt("enable_denizens") == 1)
+		setDvar( "scr_screecher_ignore_player", 0 );
+	else
+		setDvar( "scr_screecher_ignore_player", 1 );
+	player = get_players();
+	player[ 0 ] setclientfield( "screecher_sq_lights", 0 );
+	level thread richtofen_sidequest_complete_check( "C_complete" );
 }

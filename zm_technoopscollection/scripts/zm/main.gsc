@@ -26,6 +26,7 @@
 #include maps\mp\zombies\_zm_audio_announcer;
 #include maps\mp\zombies\_zm_blockers;
 #include scripts\zm\aats;
+#include scripts\zm\gobblegum;
 
 main()
 {
@@ -101,7 +102,7 @@ main()
 			replacefunc(maps\mp\zombies\_zm::round_over, ::round_over_minigame);
 		}
 		
-		if(getDvarInt("gamemode") == 2)
+		if(getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 		{
 			replacefunc(maps\mp\zombies\_zm::end_game, ::end_game_minigame);
 			replacefunc(maps\mp\zombies\_zm_powerups::init_powerups, ::init_powerups_minigame);
@@ -196,7 +197,7 @@ init()
 			level thread introHUD();
 			
 		}
-		else if (getDvarInt("gamemode") == 2)
+		else if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 		{
 			level.maxtime = 300;
 			level.roundspassed = 1;
@@ -240,14 +241,14 @@ init()
 			setStatueLocations();
 			level thread introHUD();
 		}
-		if (getDvarInt("gamemode") == 2)
+		if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 		{
 			level thread nextroundtimer();
 		}
 		level.leaper_rounds_enabled = 0;
 		if (getDvarInt("gamemode") != 0)
 		{
-			if(getDvarInt("gamemode") != 2 && getDvarInt("gamemode") != 4)
+			if(getDvarInt("gamemode") != 2 && getDvarInt("gamemode") != 4 && getDvarInt("gamemode") != 6)
 			{
 				level thread playturnedmusic();
 			}
@@ -649,7 +650,7 @@ onPlayerSpawned()
 			{
 				self thread gungameHUD();
 			}
-			else if (getDvarInt("gamemode") == 2)
+			else if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 			{
 				self thread crankedHUD();
 				
@@ -674,7 +675,7 @@ create_client_dvar( dvar, set )
 init_dvars()
 {
 	create_dvar("enable_trials", 1);
-	
+	create_dvar("debug_model", "t6_wpn_zmb_perk_bottle_jugg_world");
 	create_dvar("enable_custom_subtitles", 1);
 	create_dvar("enable_permaperks", 0);
 	//Rage Inducer
@@ -888,7 +889,7 @@ init_player_things()
 		if (getDvarInt("enable_debug") == 1)
     		self player_debug();
     	
-//    	self thread toggle_hud();
+    	self thread toggle_hud();
 
     	if (getDvarInt("enable_hitmarker") >= 1)
     		self player_hitmarker();
@@ -2902,6 +2903,7 @@ player_debug()
 	self thread toggleHidden();
 	self thread debugTitleHUD();
 	self thread debugPositionHUD();
+	self thread GetLocationsFromShooting();
 	self thread checkInputs();
 	self thread printInputs();
 	self.toggledebug = 1;
@@ -3065,6 +3067,21 @@ debugZHUD()
 		
 		wait 0.05;
 	}
+}
+
+GetLocationsFromShooting()
+{
+    for(;;)
+    {
+        self waittill("weapon_fired");
+        direction_vec = anglesToForward(self getplayerangles());
+        eye = self geteye();
+        direction_vec = (direction_vec[0] * 8000, direction_vec[1] * 8000, direction_vec[2] * 8000);
+        trace = bullettrace(eye, eye + direction_vec, 0, undefined);
+        self iprintln(trace["position"]);
+		println(trace["position"]);
+        wait 0.1;
+    }
 }
 
 debugAngleHUD()
@@ -3390,7 +3407,7 @@ loadPosition()
 createDebugModel()
 {
 	level.debugmodel = spawn( "script_model", (0,0,0));
-	level.debugmodel setmodel ("p6_zm_tm_radio_01_panel2_blood");
+	level.debugmodel setmodel (getDvar("debug_model"));
 //	level.debugmodel rotateTo(level.radioangle,.1);
 }
 
@@ -4746,9 +4763,16 @@ spawnATMDeposit()
 		if ( (i.score >= 1000) )
 		{
 			i waittill("useatm");
-			i.score -= 1000;
-			i playlocalsound ("zmb_weap_wall");
-			level.globalpoints += 1000;
+			if(i istouching( depositTrigger ))
+			{
+				i.score -= 1000;
+				i playlocalsound ("zmb_weap_wall");
+				level.globalpoints += 1000;
+			}
+		}
+		else
+		{
+			wait 0.01;
 		}
 	}
 }
@@ -4769,9 +4793,16 @@ spawnATMWithdraw()
 		if ( (level.globalpoints >= 1000) && (level.globalpoints != 0) )
 		{
 			i waittill("useatm");
-			i.score += 1000;
-			i playlocalsound ("zmb_cha_ching");
-			level.globalpoints -= 1000;
+			if(i istouching( withdrawTrigger ))
+			{
+				i.score += 1000;
+				i playlocalsound ("zmb_cha_ching");
+				level.globalpoints -= 1000;
+			}
+		}
+		else
+		{
+			wait 0.1;
 		}
 	}
 }
@@ -5388,8 +5419,6 @@ startInducer()
 	level thread change_zombies_speed("walk");
 	level thread show_big_message("Rampage Statue is satisfied", "");
 	level thread do_vox("rampage_deactivate");
-//	foreach ( player in get_players() )
-//		player thread sendsubtitletext("Rampage Statue", 1, "The statue is happy! It brought you something special!", "", 5);
 	if (level.round_number < 20)
 	{
 		level.zombie_vars[ "zombie_spawn_delay" ] = 2;
@@ -6062,10 +6091,6 @@ init_transitmisc()
 		setDvar( "scr_screecher_ignore_player", 1 );
 
 	level.skipstartcheck = 0;
-//	include_weapon( "jetgun_zm", 1 );
-//	level.explode_overheated_jetgun = true;
-//	level.unbuild_overheated_jetgun = false;
-//	level.take_overheated_jetgun = true;
 }
 
 player_transitmisc()
@@ -8039,6 +8064,23 @@ command_thread()
 					}
 				}
 				break;
+			case ".givegobble":
+				if(getDvarInt("sv_cheats") == 1)
+				{
+					if(isDefined(args[1]))
+					{
+						player givegobble(args[1]);
+					}
+					else
+					{
+						player iprintln("Please specify a Gobblegum ID!");
+					}
+				}
+				else
+				{
+					player iprintln("Cheats need to be enabled!");
+				}
+				break;
 			default:
 				break;
 		}
@@ -9050,11 +9092,18 @@ insta_kill_powerup_new( drop_item, player )
         player thread maps\mp\zombies\_zm_pers_upgrades_functions::pers_upgrade_insta_kill_upgrade_check();
 
     team = player.team;
-    level thread insta_kill_on_hud( drop_item, team );
+    level thread scripts\zm\gobblegum::insta_kill_on_hud( drop_item, team, player  );
     level.zombie_vars[team]["zombie_insta_kill"] = 1;
     foreach ( i in get_players() )
     	i thread sendsubtitletext(chooseAnnouncer(), 1, "Insta Kill!", "", 1.5);
-    wait 30;
+	if(level.gobblegums[player.gobblegum].id == "temporal_gift" && player.gobblegum_active == 1)
+	{
+		wait 60;
+	}
+	else
+	{
+		wait 30;
+	}
     level.zombie_vars[team]["zombie_insta_kill"] = 0;
     players = get_players( team );
 
@@ -9070,7 +9119,7 @@ double_points_powerup_new( drop_item, player )
     level notify( "powerup points scaled_" + player.team );
     level endon( "powerup points scaled_" + player.team );
     team = player.team;
-    level thread point_doubler_on_hud( drop_item, team );
+    level thread scripts\zm\gobblegum::point_doubler_on_hud( drop_item, team, player  );
 
     foreach ( i in get_players() )
     	i thread sendsubtitletext(chooseAnnouncer(), 1, "Double Points!", "", 1.5);
@@ -9098,7 +9147,14 @@ double_points_powerup_new( drop_item, player )
             players[player_index] setclientfield( "score_cf_double_points_active", 1 );
     }
 
-    wait 30;
+	if(level.gobblegums[player.gobblegum].id == "temporal_gift" && player.gobblegum_active == 1)
+	{
+		wait 60;
+	}
+	else
+	{
+		wait 30;
+	}
     level.zombie_vars[team]["zombie_point_scalar"] = 1;
     level._race_team_double_points = undefined;
     players = get_players();
@@ -9798,6 +9854,8 @@ treasure_chest_weapon_spawn_new( chest, player, respin )
 
     if ( isdefined( player.pers_upgrades_awarded["box_weapon"] ) && player.pers_upgrades_awarded["box_weapon"] )
         rand = maps\mp\zombies\_zm_pers_upgrades_functions::pers_treasure_chest_choosespecialweapon( player );
+	else if(isDefined(level.gobblegums[player.gobblegum]) && level.gobblegums[player.gobblegum].id == "wonderbar")
+		rand = get_wonderbar_weapons()[randomintrange(0,get_wonderbar_weapons().size)];
     else
         rand = treasure_chest_chooseweightedrandomweapon( player );
 
@@ -10003,10 +10061,7 @@ reworkedHUD()
 
 init_startergrab()
 {
-    if(getDvar("mapname") != "zm_prison")
-	{
-		level thread setStartLocation();
-	}
+	level thread setStartLocation();
 }
 
 setStartLocation()
@@ -10045,7 +10100,7 @@ setStartLocation()
 	{
 		if(getDvar("mapname") == "zm_prison") //mob of the dead
 		{
-
+			thread spawnStarterCrate((755.531, 10397.1, 1344.13), "m1911_zm", "t6_wpn_pistol_m1911_world", -90);
 		}
 		else if(getDvar("mapname") == "zm_buried") //buried
 		{
@@ -10083,7 +10138,7 @@ spawnStarterCrate(location, weapon, weaponmodel, angle)
 	for(;;)
 	{
 		starterTrigger waittill( "trigger", player );
-		if ( player usebuttonpressed() )
+		if ( player usebuttonpressed() && !isDefined(player.e_afterlife_corpse))
 		{
 			if(player usebuttonpressed() && !player maps\mp\zombies\_zm_laststand::player_is_in_laststand() )
 			{
@@ -10167,7 +10222,7 @@ init_powerups_minigame()
 		add_zombie_powerup( "empty_clip", "zombie_ammocan", &"ZOMBIE_POWERUP_MAX_AMMO", ::func_should_never_drop, 0, 0, 1 );
 		add_zombie_powerup( "insta_kill_ug", "zombie_skull", &"ZOMBIE_POWERUP_INSTA_KILL", ::func_should_never_drop, 1, 0, 0, undefined, "powerup_instant_kill_ug", "zombie_powerup_insta_kill_ug_time", "zombie_powerup_insta_kill_ug_on", 5000 );
 	}
-	else if (getDvarInt("gamemode") == 2)
+	else if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 	{
 		add_zombie_powerup( "nuke", "zombie_bomb", &"ZOMBIE_POWERUP_NUKE", ::func_should_never_drop, 0, 0, 0, "misc/fx_zombie_mini_nuke_hotness" );
 		add_zombie_powerup( "insta_kill", "zombie_skull", &"ZOMBIE_POWERUP_INSTA_KILL", ::func_should_always_drop, 0, 0, 0, undefined, "powerup_instant_kill", "zombie_powerup_insta_kill_time", "zombie_powerup_insta_kill_on" );
@@ -10673,6 +10728,28 @@ actor_killed_override( einflictor, attacker, idamage, smeansofdeath, sweapon, vd
 			}
 			attacker notify("reset_glow");
 			attacker thread green_glow(attacker.nametarget);
+		}
+		else if (getDvarInt("gamemode") == 6)
+		{
+			foreach(player in level.players)
+			{
+				if (player.timerstarted == 0)
+				{
+					player.timerstarted = 1;
+					player thread cranked_timer();
+					player thread showBelowMessage("Let the carnage begin!", "zmb_weap_wall");
+				}
+				else
+				{
+					if (player.seconds < level.maxtime)
+					{
+						player.seconds = level.maxtime;
+						player.miliseconds = 10;
+					}
+				}
+				player notify("reset_glow");
+				player thread green_glow(player.nametarget);
+			}
 		}
 
     }
@@ -11264,7 +11341,7 @@ end_game_minigame()
                 game_over[i].alpha = 0;
                 game_over[i].color = ( 1, 1, 1 );
                 game_over[i].hidewheninmenu = 1;
-				if (isDefined(level.winner))
+				if (isDefined(level.winner) && getDvarInt("gamemode") == 6)
 				{
 					game_over[i] settext( level.winner + " wins!" );
 				}
@@ -11321,7 +11398,6 @@ end_game_minigame()
             }
             else
 				survived[i] settext( "You Survived " + level.round_number + " Rounds" + choose_end_text(players[i]) );
-
 
             survived[i] fadeovertime( 1 );
             survived[i].alpha = 1;
@@ -11495,16 +11571,16 @@ round_think_minigame( restart )
 
         players = get_players();
 
-        if ( isdefined( level.no_end_game_check ) && level.no_end_game_check )
-        {
-            level thread last_stand_revive();
-			if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 4)
+		if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 6)
+		{
+			if ( isdefined( level.no_end_game_check ) && level.no_end_game_check )
 			{
+				level thread last_stand_revive();
 				level thread spectators_respawn();
 			}
-        }
-//        else if ( 1 != players.size )
-//            level thread spectators_respawn();
+			else if ( 1 != players.size )
+				level thread spectators_respawn();
+		}
 
         players = get_players();
         array_thread( players, maps\mp\zombies\_zm_pers_upgrades_system::round_end );
@@ -11569,7 +11645,7 @@ wait_for_ready_input()
 					{
 						level.gungamestarted = 1;
 					}
-					else if (getDvarInt("gamemode") == 2)
+					else if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 					{
 						level.crankedstarted = 1;
 						level thread playcrankedmusic();
@@ -12159,6 +12235,10 @@ startHUDMessage()
 	{
 		hud2 settext("Sharpshooter");
 	}
+	else if (getDvarInt("gamemode") == 6)
+	{
+		hud2 settext("Team Cranked");
+	}
 	hud2.fontscale = 8;
 	hud2 changefontscaleovertime( 1 );
     hud2 fadeovertime( 1 );
@@ -12198,6 +12278,10 @@ startHUDMessage()
 	else if (getDvarInt("gamemode") == 5)
 	{
 		hud3 settext("Weapons roll after a duration. If a weapon is upgraded, the next will be upgraded aswell.");
+	}
+	else if (getDvarInt("gamemode") == 6)
+	{
+		hud3 settext("Everyone shares a timer! Kill to reset. When time runs out, its game over!");
 	}
 	hud3.fontscale = 2;
 	hud3 changefontscaleovertime( 1 );
@@ -12307,11 +12391,25 @@ unlimited_ammo_powerup()
 
 pause_timer_powerup()
 {
-	self notify("end_pause_timer");
-	self playlocalsound("zmb_cha_ching");
-	self thread turn_on_pause_timer();
-	self thread pause_timer_on_hud();
-	self thread notify_pause_timer_end();
+	if(getDvarInt("gamemode") == 6)
+	{
+		foreach(player in level.players)
+		{
+			player notify("end_pause_timer");
+			player playsound("zmb_cha_ching");
+			player thread turn_on_pause_timer();
+			player thread pause_timer_on_hud();
+			player thread notify_pause_timer_end();
+		}
+	}
+	else
+	{
+		self notify("end_pause_timer");
+		self playsound("zmb_cha_ching");
+		self thread turn_on_pause_timer();
+		self thread pause_timer_on_hud();
+		self thread notify_pause_timer_end();
+	}
 }
 
 upgrade_weapon_powerup()
@@ -13443,7 +13541,14 @@ end_game_new()
 				
 				if(level.completedmodmainquest == true)
 				{
-					game_over[i] settext( "MAIN QUEST COMPLETED" );
+					if(if_current_map_has_guided())
+					{
+						game_over[i] settext( "GUIDED MODE MAIN QUEST COMPLETED" );
+					}
+					else
+					{
+						game_over[i] settext( "MAIN QUEST COMPLETED" );
+					}
 				}
 				else
 				{
@@ -13511,6 +13616,10 @@ end_game_new()
             else
                 survived[i] settext( "You Survived " + level.round_number + " Rounds" + choose_end_text(players[i]) );
 
+			if(level.completedmodmainquest == true && if_current_map_has_guided())
+			{
+				survived[i] settext( "Play with Guided Mode disabled for a challenge!" );
+			}
             survived[i] fadeovertime( 1 );
             survived[i].alpha = 1;
         }
@@ -13582,7 +13691,7 @@ choose_end_text(player)
 	{
 		return " and Your Score is " + player.weaponlevel;
 	}
-	else if(getDvarInt("gamemode") == 2)
+	else if(getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 	{
 		total_survival_time = int((player.survival_end_time - player.survival_start_time) / 1000);
 		return " and Your Survival Time is " + total_survival_time;
@@ -14707,4 +14816,101 @@ notify_player_action(message)
 			player iprintln(message);
 		}
 	}
+}
+
+createGuidedHUD()
+{
+	level endon("end_game");
+
+	level.guidedHUD = newhudelem();
+	level.guidedHUD.alignx = "left";
+	level.guidedHUD.aligny = "top";
+	level.guidedHUD.horzalign = "user_left";
+	level.guidedHUD.vertalign = "user_top";
+	level.guidedHUD.x = 60;
+	level.guidedHUD.y = 80;
+	level.guidedHUD.fontscale = 1;
+	level.guidedHUD.alpha = 1;
+	level.guidedHUD.color = ( 0.5, 0.5, 1 );
+	level.guidedHUD.hidewheninmenu = 1;
+	level.guidedHUD.foreground = 0;
+//	level.guidedHUD.label = &"Test";
+}
+
+updateGuidedHUD(text)
+{
+	level.guidedHUD notify ("reset_hud");
+	level.guidedHUD endon ("reset_hud");
+	
+	fade_speed = 0.4;
+	text_delay = 3;
+	
+	level.guidedHUD.alpha = 1;
+	level.guidedHUD fadeovertime(fade_speed);
+	level.guidedHUD.alpha = 0;
+	wait fade_speed;
+	foreach(player in level.players)
+	{
+		player playlocalsound("guided_notify");
+	}
+	level.guidedHUD setText("Objective Updated");
+	level.guidedHUD fadeovertime(fade_speed);
+	level.guidedHUD.alpha = 1;
+	
+	wait text_delay;
+	
+	level.guidedHUD.alpha = 1;
+	level.guidedHUD fadeovertime(fade_speed);
+	level.guidedHUD.alpha = 0;
+	wait fade_speed;
+	level.guidedHUD setText("Objective:\n" + text);
+	level.guidedHUD fadeovertime(fade_speed);
+	level.guidedHUD.alpha = 1;
+}
+
+removeGuidedHUD()
+{
+	level.guidedHUD destroy();
+}
+
+updateGuidedHUDIcon(destination, icon, includeDistanceText)
+{
+	if(!isDefined(includedDistanceText))
+	{
+		includedDistanceText = false;
+	}
+	if(!isDefined(level.guidedIcon))
+	{
+		level.guidedIcon = newHudElem();
+	}
+    level.guidedIcon.x = destination[0];
+    level.guidedIcon.y = destination[1];
+	level.guidedIcon.z = destination[2] + 20;
+	level.guidedIcon.color = ( 0.5, 0.5, 1 );
+    level.guidedIcon.isshown = 1;
+    level.guidedIcon.archived = 0;
+    level.guidedIcon setshader( icon, 6, 6 );
+    level.guidedIcon setwaypoint( 0, icon, includeDistanceText );
+}
+
+removeGuidedHUDIcon()
+{
+	level.guidedIcon destroy();
+}
+
+if_current_map_has_guided()
+{
+	if(getDvarInt("guided_mode") == 1)
+	{
+		supported_maps = array("zm_transit");
+		foreach(map in supported_maps)
+		{
+			if(getDvar("mapname") == map && getDvar( "g_gametype" ) == "zclassic" )
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	return false;
 }

@@ -64,7 +64,15 @@ init()
 		return;
 	}
 	
+	if(getDvarInt("guided_mode") == 1)
+	{
+		createGuidedHUD();
+		level thread GuidedModeChecks();
+	}
 	level._poi_override = ::unused_override;
+	level.hasdigger = false;
+	level.workbenchbuilt = false;
+	level.workbenchactivated = false;
 	level.partmodels = array("p6_zm_bu_sq_satellite_dish","p6_zm_bu_sq_crystal","p6_zm_tm_barbedwire_tube");
 	level.parts = array(false,false,false);
 	level.dirtPilesList = array((7726.28, -5133.31, 37.4349),(7813.05, -4956.94, 43.0341),(7806.02, -4723.67, 44.2192));
@@ -72,11 +80,118 @@ init()
 	level.pickeduplavamachine = false;
 	lavaPools = array((1337.36, 176.989, -69.875),(-11303, -2026.11, 184.125),(10049.9, -1216.3, -217.875));
 	
+	if(getDvarInt("force_spawn_boss") == 1)
+	{
+		level thread spawnBossStart();
+	}
+	
 	level.chosenLavaPool = lavaPools[randomintrange(0,lavaPools.size - 1)];
 	
 	level waittill ("power_on");
 	level thread spawnPhone();
 	level.defensemode = false;
+}
+
+GuidedModeChecks()
+{
+//	updateGuidedHUDIcon(destination, icon, includeDistanceText);
+	level waittill ("start_of_round");
+	updateGuidedHUDIcon((12165.7, 8464.13, -751.375), "objective_marker", true);
+	updateGuidedHUD("Turn on the Power");
+	level waittill ("power_on");
+	updateGuidedHUDIcon((-6480.5, 5292.81, 3.07276), "objective_marker", true);
+	updateGuidedHUD("Answer the Phone in the Bus Depot");
+	while(level.mainqueststarted == false)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((-4183, -7764, -61.86), "objective_marker", true);
+	updateGuidedHUD("Pickup the Shovel at the Diner");
+	while(level.hasshovel == false)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((7775.22, -5054.64, 40), "search_marker", true);
+	updateGuidedHUD("Dig up the Sattelite at the Barn");
+	while(level.parts[0] == false)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((4101.23, 5488.46, -63.875), "objective_marker", true);
+	updateGuidedHUD("Kill Zombies near the Radio to drop Wires");
+	while(level.parts[2] == false)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1525.15, 2226.91, -52.5979), "objective_marker", true);
+	updateGuidedHUD("Pickup the Lava Digger Machine near the Workbench");
+	while(level.hasdigger == false)
+	{
+		wait 0.1;
+	}
+	GuidedModeMachine();
+	updateGuidedHUDIcon(level.chosenLavaPool, "objective_marker", true);
+	updateGuidedHUD("Pickup the Crystal from the Machine");
+	while(level.parts[1] == false)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1486.65, 2060.84, -47.8691), "objective_marker", true);
+	updateGuidedHUD("Place all the parts onto the Workbench");
+	while(level.workbenchbuilt == false)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1486.65, 2060.84, -47.8691), "objective_marker", true);
+	updateGuidedHUD("Fuel the Workbench with Zombie Kills");
+	while(level.currentsouls < level.maxsouls)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1486.65, 2060.84, -47.8691), "objective_marker", true);
+	updateGuidedHUD("Begin the Workbench Connection");
+	while(level.workbenchactivated == false)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1486.65, 2060.84, -47.8691), "objective_marker", true);
+	updateGuidedHUD("Defend the Workbench");
+	while(level.workbenchactivated == true)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1765.37, -88.9562, -33.9563), "objective_marker", true);
+	updateGuidedHUD("Interact with the floating Crystal and deal with the Disturbance");
+	while(level.bossstarted == 0)
+	{
+		wait 0.1;
+	}
+	removeGuidedHUDIcon();
+	removeGuidedHUD();
+}
+
+GuidedModeMachine()
+{
+	for(;;)
+	{
+		updateGuidedHUDIcon(level.chosenLavaPool, "objective_marker", true);
+		updateGuidedHUD("Place the Digger on a Lava Pool");
+		while(level.defensemode == false)
+		{
+			wait 0.1;
+		}
+		updateGuidedHUDIcon(level.chosenLavaPool, "defense_marker", true);
+		updateGuidedHUD("Defend the Machine until time runs out");
+		level waittill_any( "machine_destroyed", "end_quest_rage", "end_game" );
+		if(!isDefined(level.machine))
+		{
+			wait 0.1;
+		}
+		else
+		{
+			break;
+		}
+	}
 }
 
 spawnRadio(location, angle, log, log_duration)
@@ -475,20 +590,10 @@ tranzitEEsequence()
 	do_vox_subtitles("Phone", "Im stuck in some part of the Aether, like a deeper layer of it.", 4, "vox_intro_3");
 	do_vox_subtitles("Entity", "He cant hear us. We gotta build a bigger connection!", 3, "vox_intro_4");
 	do_vox_subtitles("Entity", "You must find the parts to the device so we can contact him!", 4, "vox_intro_5");
-	
+	level.mainqueststarted = true;
 	level thread ignoreAllPlayers(0);
 	
 	level thread minion_round_watcher();
-
-//	level thread createGuidedPartIcon(0, (7930.38, -5716.31, 11.3838));
-	wait 0.2;
-//	level thread createGuidedPartIcon(1, (-11340.5, -983.951, 192.125));
-	wait 0.2;
-//	level thread createGuidedPartIcon(2, (1478.87, -434.099, -67.875));
-	wait 0.2;
-//	level thread createGuidedShovelIcon((-4183,-7764,-61));
-
-	level thread setObjective("Find the parts", "", (0,0,0));
 
 	level thread createPiles(random(level.dirtPilesList));
 	level thread spawnMachine((1525.15, 2226.91, -52.5979));
@@ -622,8 +727,6 @@ spawnDiggerMachine(location)
 	angle = randomintrange(0,180);
 	level.machine rotateTo((90,90,180),.01);
 	
-	level thread setObjective("Defend the Machine", "defense_marker", location);
-	
 	level.machine.health = 100;
 	
 	if(level.zombie_total > 0)
@@ -645,7 +748,10 @@ spawnDiggerMachine(location)
 
 	earthquake( 1, 1.8, location, 256 );
 	
-	level thread do_vox_subtitles("Entity", "I guess they dont like that!", 2, "vox_part_2_start"); //????
+	if(getDvarInt("guided_mode") == 1)
+	{
+		level thread do_vox_subtitles("Entity", "I guess they dont like that!", 2, "vox_part_2_start"); //????
+	}
 
 	level thread startSecondPartHorde();
 	
@@ -833,7 +939,14 @@ attack_function()
         {
 			angles = VectorToAngles( level.machine.origin - self.origin );
 			self animscripted( self.origin, angles, attackanim );
-			level.machine machine_damage(3);
+			if(getDvarInt("guided_mode") == 1)
+			{
+				level.machine machine_damage(1);
+			}
+			else
+			{
+				level.machine machine_damage(3);
+			}
 			wait 1;
         }
 		else
@@ -961,6 +1074,7 @@ workbench(location, angle)
 placeitem(location, angle)
 {
 	level notify ("quest_step_1");
+	level.workbenchbuilt = true;
 
 	satModel = spawn( "script_model", (location[0] - 5.33, location[1] + 10.93, location[2] + 59.0035));
 	satModel setmodel ("p6_zm_bu_sq_satellite_dish");
@@ -1096,15 +1210,13 @@ workbench_fuel_players()
 
 spawnPhone()
 {
-	locations = array((-6480.5, 5292.81, 3.07276),(-6453.53, 5307.02, 4.07276));
+	locations = (-6480.5, 5292.81, 3.07276);
 	
-	location = randomintrange(0,1);
-	
-	phoneTrigger = spawn( "trigger_radius", (locations[location]), 1, 20, 100 );
+	phoneTrigger = spawn( "trigger_radius", (locations), 1, 20, 100 );
 	phoneTrigger setHintString("Press ^3&&1 ^7to answer");
 	phoneTrigger setcursorhint( "HINT_NOICON" );
 	
-	level thread playphone(locations[location]);
+	level thread playphone(locations);
 	
 	for(;;)
 	{
@@ -1167,7 +1279,10 @@ finalEncounterSequence()
 	do_vox_subtitles("Phone", "*garbles* Hello? I think I can hea- *static*", 4, "vox_final_intro_3");
 	do_vox_subtitles("Entity", "The connection is choppy! Moving the bench for a better signal!", 3, "vox_final_intro_4");
 	
-	do_vox_subtitles("Entity", "Uh oh. Looks like the undead dont like the workbench. You must protect it!", 5, "vox_final_intro_5");
+	if(getDvarInt("guided_mode") == 1)
+	{
+		do_vox_subtitles("Entity", "Uh oh. Looks like the undead dont like the workbench. You must protect it!", 5, "vox_final_intro_5");
+	}
 	
 	level thread ignoreAllPlayers(0);
 	
@@ -1195,7 +1310,7 @@ finalEncounterSequence()
 	
 	thread defenseBench((1225.66, -1054.34, -55.875), 0);
 	level.defense_text.label = &"Get to the workbench at Town ^6";
-	level thread setObjective("Defend the Workbench at Town", "defense_marker", (1136.61, -1232.16, -55.875));
+	updateGuidedHUDIcon((1225.66, -1054.34, -55.875), "defense_marker", false);
 	level.candamagebench = true;
 	startEncounterIfPlayersAreNear();
 	level.candamagebench = false;
@@ -1204,7 +1319,7 @@ finalEncounterSequence()
 	createFinalDefenseHUD();
 	level.defense_text.label = &"Get to the workbench at Farm ^6";
 	thread defenseBench((7927.59, -5516.93, 37.3758),-100.569);
-	level thread setObjective("Defend the Workbench at Farm", "defense_marker", (7927.59, -5516.93, 37.3758));
+	updateGuidedHUDIcon((7927.59, -5516.93, 37.3758), "defense_marker", false);
 	level.candamagebench = true;
 	startEncounterIfPlayersAreNear();
 	level.candamagebench = false;
@@ -1213,7 +1328,7 @@ finalEncounterSequence()
 	createFinalDefenseHUD();
 	level.defense_text.label = &"Get to the workbench at Diner ^6";
 	thread defenseBench((-5248.32, -7148.79, -58.875),0);
-	level thread setObjective("Defend the Workbench at Diner", "defense_marker", (-5373.39, -7802.24, -67.3002));
+	updateGuidedHUDIcon((-5248.32, -7148.79, -58.875), "defense_marker", false);
 	level.candamagebench = true;
 	level thread if_all_players_are_too_far_away();
 	startEncounterIfPlayersAreNear(1);
@@ -1244,6 +1359,7 @@ finalEncounterSequence()
 
 	do_vox_subtitles("Entity", "Something is jamming the signal!", 2, "vox_final_8");
 	do_vox_subtitles("Entity", "Sounds like its coming from the Town!", 3, "vox_final_9");
+	level.workbenchactivated = false;
 
 	level thread spawnBossStart();
 
@@ -1491,10 +1607,17 @@ workbench_attack_function()
         {
 			angles = VectorToAngles( level.workbench.origin - self.origin );
 			self animscripted( self.origin, angles, attackanim );
-			level.workbench workbench_damage(2);
+			if(getDvarInt("guided_mode") == 1)
+			{
+				level.workbench workbench_damage(1);
+			}
+			else
+			{
+				level.workbench workbench_damage(2);
+			}
 			wait 1;
         }
-			else
+		else
         {
             self stopanimscripted();
         }    
@@ -1637,46 +1760,11 @@ setObjective(text, shader, location)
 	level.objectiveorigin = location;
 	
 	level.guided_text.label = text;
-
-//	level.defense_text.label = &"" + text + "^6";
-
-	level thread createGuidedIcon(shader);
 }
 
 setPartIcons(partnum, location)
 {
 	level thread createGuidedPartIcon(partnum, location);
-}
-
-createGuidedIcon(shader)
-{
-	if(1)
-	{
-		return;
-	}
-	
-	if (isDefined(level.objectiveicon))
-	{
-		level.objectiveicon destroy();
-		wait 0.1;
-	}
-	
-	level.objectiveicon = newHudElem();
-	level.objectiveicon.color = (1,1,1);
-    level.objectiveicon.alpha = 1;
-	level.objectiveicon.archived = 1;
-	level.objectiveicon.isshown = 1;
-	level.objectiveicon setshader( shader, 6, 6 );
-    level.objectiveicon setwaypoint( 1 );
-	
-	level.objectiveicon.x = level.objectiveorigin[0];
-	level.objectiveicon.y = level.objectiveorigin[1];
-	level.objectiveicon.z = level.objectiveorigin[2] + 40;
-	
-	for(;;)
-	{
-		wait 0.1;
-	}
 }
 
 createGuidedPartIcon(partnum, location)
@@ -1804,7 +1892,16 @@ random_part3_players()
 			{
 				if( !( isdefined(zombie.is_mechz) && zombie.is_mechz )  && zombie isTouching( playables[ a ] ) && zombie.completed_emerging_into_playable_area == 1 && zombie.is_traversing == 0 && !( isdefined( zombie.is_traversing ) && zombie.is_traversing ) && zombie.ai_state == "find_flesh")
 				{
-					if(randomintrange(1,100) >= 60)
+					if(getDvarInt("guided_mode") == 1)
+					{
+						random = 60;
+					}
+					else
+					{
+						random = 80;
+					}
+					
+					if(randomintrange(1,100) >= 80)
 					{
 						playfx(level._effect["powerup_grabbed"], zombie.origin);
 						level thread spawnpart(zombie.origin, 2);
@@ -1833,6 +1930,7 @@ spawnMachine(location)
 		partTrigger waittill( "trigger", i );
 		if ( i usebuttonpressed() )
 		{	
+			level.hasdigger = true;
 			partTrigger delete();
 			partModel delete();
 			do_vox_subtitles("Entity", "This machine can dig through lava pools, a workbench part might be in one.", 4, "vox_pickup_machine");
@@ -1878,6 +1976,7 @@ spawnFinalEncounterTrigger(location)
 		partTrigger waittill( "trigger", i );
 		if ( i usebuttonpressed() && level.exfilstarted == 0)
 		{	
+			level.workbenchactivated = true;
 			level thread finalEncounterSequence();
 			break;
 		}
@@ -2169,7 +2268,18 @@ players_are_near(origin, distance)
 			num += 1;
 		}
 	}
-	if(num == level.players.size)
+	
+	max_players = level.players.size;
+	
+	foreach(player in level.players)
+	{
+		if(isDefined(player.bot))
+		{
+			max_players -= 1;
+		}
+	}
+	
+	if(num == max_players)
 	{
 		return true;
 	}
@@ -2557,7 +2667,14 @@ boss_status()
 {
 	max_phase = 4;
 	phase_bar = level.bossentity.maxhealth / 4;
-	halfsies = int(max_phase / 2);
+	if(getDvarInt("guided_mode") == 1)
+	{
+		halfsies = int(max_phase / 4);
+	}
+	else
+	{
+		halfsies = int(max_phase / 2);
+	}
 	phase = 1;
 	self.isInvulnerable = 0;
 	self thread loop_shock_line_fx();
@@ -2761,18 +2878,30 @@ boss_killed()
 	level.holdround = false;
 
 	level.completedmodmainquest = true;
-	if(getDvarInt("continue_game_after_quest") == 1)
+	if(getDvarInt("guided_mode") == 1)
 	{
-		level thread spawnRewards((1446.1, -121.101, -61.875));
-		level.the_bus bus_power_on();
-		foreach (player in level.players)
-		{
-			player thread give_player_all_perks();
-		}
+		level notify ("end_game");
 	}
 	else
 	{
-		level notify ("end_game");
+		if(getDvarInt("stats_completed_quest_1") != 1)
+		{
+			setDvar("stats_completed_quest_1", 1);
+		}
+		
+		if(getDvarInt("continue_game_after_quest"))
+		{
+			level thread spawnRewards((1446.1, -121.101, -61.875));
+			level.the_bus bus_power_on();
+			foreach (player in level.players)
+			{
+				player thread give_player_all_perks();
+			}
+		}
+		else
+		{
+			level notify ("end_game");
+		}
 	}
 }
 
@@ -2918,7 +3047,6 @@ spawn_wave_minions(phase)
 	}
 	
 	level notify ("finished_spawning_minions");
-	
 	if(phase == 1)
 	{
 		do_vox_subtitles("Avogadro", "Minions! Come on out!", 3, "vox_boss_minions");

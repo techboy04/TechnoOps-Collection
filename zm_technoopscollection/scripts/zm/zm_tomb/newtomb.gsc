@@ -31,7 +31,7 @@ main()
 	if (getDvarInt("enable_recapturerounds") == 0)
 	{
 		replacefunc(maps\mp\zm_tomb_capture_zones::recapture_round_start, ::recapture_round_start_new);
-		replacefunc(maps\mp\zm_tomb_utility::player_slow_movement_speed_monitor, ::player_slow_movement_speed_monitor);
+//		replacefunc(maps\mp\zm_tomb_utility::player_slow_movement_speed_monitor, ::player_slow_movement_speed_monitor);
 	}
 	replacefunc(maps\mp\zombies\_zm_craftables::craftable_use_hold_think_internal, ::craftable_use_hold_think_internal_new);
 	if (getDvarInt("enable_originsfootchanges") == 1)

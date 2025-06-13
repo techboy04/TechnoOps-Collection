@@ -48,6 +48,53 @@ main()
 	}
 }
 
+init()
+{
+	if(getDvar("mapname") == "zm_prison") 
+	{
+		SetDvar( "scr_zm_enable_bots", "0" );
+		level thread onPlayerConnect();	
+	}
+}
+
+onPlayerConnect()
+{
+	level waittill("connected", player);
+    player thread mob_solo_watcher();
+} 
+
+mob_solo_watcher()
+{
+    self endon("disconnect");
+	level waittill_multiple( "nixie_final_" + 386, "nixie_final_" + 481, "nixie_final_" + 101, "nixie_final_" + 872 );
+	wait 10;
+	for(;;)
+	{	
+		self endon( "stage_final" );
+		players = getplayers();
+		if(players.size == 1){	
+			SetDvar( "scr_zm_enable_bots", "1" );
+			addtestclient();	
+			SetDvar( "scr_zm_enable_bots", "0" );
+			wait 5;
+		}
+		self thread infiniteafter();
+		wait 5;
+	}
+}
+
+infiniteafter()
+{
+	foreach( p in level.players )
+	{
+		p.infinite_mana = 1;
+		if ( level.final_flight_activated ){
+			p afterlife_remove();
+		}
+	}
+
+}
+
 check_solo_status_new()
 {
     if(getDvarInt("planeparts_per_player") == 0)
@@ -476,7 +523,7 @@ afterlife_laststand_new( b_electric_chair )
     if ( !( isdefined( self.hostmigrationcontrolsfrozen ) && self.hostmigrationcontrolsfrozen ) )
         self freezecontrols( 0 );
 
-	if(!self.alreadyingodmode)
+	if(getDvarInt("retain_god_mode") != 1)
 	{
 		self disableinvulnerability();
 	}
@@ -487,6 +534,10 @@ afterlife_laststand_new( b_electric_chair )
     self.afterlife_revived = 1;
     playsoundatposition( "zmb_afterlife_spawn_leave", self.e_afterlife_corpse.origin );
     self afterlife_leave();
+	if(getDvarInt("retain_god_mode") != 1)
+	{
+		self disableinvulnerability();
+	}
     self thread afterlife_revive_invincible();
     self playsound( "zmb_afterlife_revived_gasp" );
 }
@@ -495,7 +546,7 @@ afterlife_revive_invincible_new()
 {
     self endon( "disconnect" );
     wait 2;
-	if(!self.alreadyingodmode)
+	if(getDvarInt("retain_god_mode") != 1)
 	{
 		self disableinvulnerability();
 	}
@@ -546,7 +597,7 @@ electric_chair_player_thread_new( m_linkpoint, chair_number, n_effects_duration 
     level.zones["zone_golden_gate_bridge"].is_enabled = 1;
     level.zones["zone_golden_gate_bridge"].is_spawning_allowed = 1;
     self.keep_perks = 1;
-	if(!self.alreadyingodmode)
+	if(getDvarInt("retain_god_mode") != 1)
 	{
 		self disableinvulnerability();
 	}
@@ -668,7 +719,7 @@ plane_boarding_thread_new()
     self setclientfieldtoplayer( "isspeaking", 0 );
     self notify( "player_at_bridge" );
     wait( n_shellshock_duration );
-	if(!self.alreadyingodmode)
+	if(getDvarInt("retain_god_mode") != 1)
 	{
 		self disableinvulnerability();
 	}

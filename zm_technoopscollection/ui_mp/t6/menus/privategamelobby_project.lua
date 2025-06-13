@@ -11,6 +11,7 @@ CoD.PrivateGameLobby.PlayerSelect[1].labels[3] = "CRANKED"
 CoD.PrivateGameLobby.PlayerSelect[1].labels[4] = "MYSTERY GUNS"
 CoD.PrivateGameLobby.PlayerSelect[1].labels[5] = "DEAD LIGHT GREEN LIGHT"
 CoD.PrivateGameLobby.PlayerSelect[1].labels[6] = "SHARPSHOOTER"
+CoD.PrivateGameLobby.PlayerSelect[1].labels[7] = "TEAM CRANKED"
 CoD.PrivateGameLobby.PlayerSelect[1].values = {}
 CoD.PrivateGameLobby.PlayerSelect[1].values[1] = 0
 CoD.PrivateGameLobby.PlayerSelect[1].values[2] = 1
@@ -18,6 +19,7 @@ CoD.PrivateGameLobby.PlayerSelect[1].values[3] = 2
 CoD.PrivateGameLobby.PlayerSelect[1].values[4] = 3
 CoD.PrivateGameLobby.PlayerSelect[1].values[5] = 4
 CoD.PrivateGameLobby.PlayerSelect[1].values[6] = 5
+CoD.PrivateGameLobby.PlayerSelect[1].values[7] = 6
 CoD.PrivateGameLobby.PlayerSelect[1].maps = {}
 CoD.PrivateGameLobby.PlayerSelect[1].maps[1] = "zm_transit"
 CoD.PrivateGameLobby.PlayerSelect[1].maps[2] = "zm_highrise"
@@ -358,6 +360,97 @@ CoD.PrivateGameLobby.PlayerSelect[17].gameTypes = {}
 CoD.PrivateGameLobby.PlayerSelect[17].gameTypes[1] = "zclassic"
 CoD.PrivateGameLobby.PlayerSelect[17].gameTypes[2] = "zstandard"
 
+CoD.PrivateGameLobby.PlayerSelect[18] = {}
+CoD.PrivateGameLobby.PlayerSelect[18].id = "guided_mode"
+CoD.PrivateGameLobby.PlayerSelect[18].name = "GUIDED MODE"
+CoD.PrivateGameLobby.PlayerSelect[18].hintText = "When enabled, have objective markers guide you through the Main Quest. Difficulty will be reduced. (Mod Quests only)"
+CoD.PrivateGameLobby.PlayerSelect[18].labels = {}
+CoD.PrivateGameLobby.PlayerSelect[18].labels[1] = "DISABLED"
+CoD.PrivateGameLobby.PlayerSelect[18].labels[2] = "ENABLED"
+CoD.PrivateGameLobby.PlayerSelect[18].values = {}
+CoD.PrivateGameLobby.PlayerSelect[18].values[1] = 0
+CoD.PrivateGameLobby.PlayerSelect[18].values[2] = 1
+CoD.PrivateGameLobby.PlayerSelect[18].maps = {}
+CoD.PrivateGameLobby.PlayerSelect[18].maps[1] = "zm_transit"
+CoD.PrivateGameLobby.PlayerSelect[18].gameTypes = {}
+CoD.PrivateGameLobby.PlayerSelect[18].gameTypes[1] = "zclassic"
+
+CoD.PrivateGameLobby.Experimental = {}
+CoD.PrivateGameLobby.Experimental[1] = {}
+CoD.PrivateGameLobby.Experimental[1].id = "zm_bots_count"
+CoD.PrivateGameLobby.Experimental[1].name = "BOTS"
+CoD.PrivateGameLobby.Experimental[1].hintText = "Adjust Bots - HIGHLY EXPERIMENTAL"
+CoD.PrivateGameLobby.Experimental[1].labels = {}
+CoD.PrivateGameLobby.Experimental[1].labels[1] = "NONE"
+CoD.PrivateGameLobby.Experimental[1].labels[2] = "1"
+CoD.PrivateGameLobby.Experimental[1].labels[3] = "2"
+CoD.PrivateGameLobby.Experimental[1].labels[4] = "3"
+CoD.PrivateGameLobby.Experimental[1].labels[5] = "4"
+CoD.PrivateGameLobby.Experimental[1].labels[6] = "5"
+CoD.PrivateGameLobby.Experimental[1].labels[7] = "6"
+CoD.PrivateGameLobby.Experimental[1].labels[8] = "7"
+CoD.PrivateGameLobby.Experimental[1].values = {}
+CoD.PrivateGameLobby.Experimental[1].values[1] = 0
+CoD.PrivateGameLobby.Experimental[1].values[2] = 1
+CoD.PrivateGameLobby.Experimental[1].values[3] = 2
+CoD.PrivateGameLobby.Experimental[1].values[4] = 3
+CoD.PrivateGameLobby.Experimental[1].values[5] = 4
+CoD.PrivateGameLobby.Experimental[1].values[6] = 5
+CoD.PrivateGameLobby.Experimental[1].values[7] = 6
+CoD.PrivateGameLobby.Experimental[1].values[8] = 7
+CoD.PrivateGameLobby.Experimental[1].maps = {}
+CoD.PrivateGameLobby.Experimental[1].maps[1] = "zm_transit"
+CoD.PrivateGameLobby.Experimental[1].maps[2] = "zm_highrise"
+CoD.PrivateGameLobby.Experimental[1].maps[3] = "zm_buried"
+CoD.PrivateGameLobby.Experimental[1].maps[4] = "zm_prison"
+CoD.PrivateGameLobby.Experimental[1].maps[5] = "zm_nuked"
+CoD.PrivateGameLobby.Experimental[1].maps[6] = "zm_tomb"
+CoD.PrivateGameLobby.Experimental[1].gameTypes = {}
+CoD.PrivateGameLobby.Experimental[1].gameTypes[1] = "zclassic"
+CoD.PrivateGameLobby.Experimental[1].gameTypes[2] = "zstandard"
+
+CoD.PrivateGameLobby.Experimental[2] = {}
+CoD.PrivateGameLobby.Experimental[2].id = "experimental_aat"
+CoD.PrivateGameLobby.Experimental[2].name = "ALTERNATE AMMO TYPES"
+CoD.PrivateGameLobby.Experimental[2].hintText = "Toggles Alternate Ammo Types when Re-Packing - HIGHLY EXPERIMENTAL"
+CoD.PrivateGameLobby.Experimental[2].labels = {}
+CoD.PrivateGameLobby.Experimental[2].labels[1] = "DISABLED"
+CoD.PrivateGameLobby.Experimental[2].labels[2] = "ENABLED"
+CoD.PrivateGameLobby.Experimental[2].values = {}
+CoD.PrivateGameLobby.Experimental[2].values[1] = 0
+CoD.PrivateGameLobby.Experimental[2].values[2] = 1
+CoD.PrivateGameLobby.Experimental[2].maps = {}
+CoD.PrivateGameLobby.Experimental[2].maps[1] = "zm_transit"
+CoD.PrivateGameLobby.Experimental[2].maps[2] = "zm_highrise"
+CoD.PrivateGameLobby.Experimental[2].maps[3] = "zm_buried"
+CoD.PrivateGameLobby.Experimental[2].maps[4] = "zm_prison"
+CoD.PrivateGameLobby.Experimental[2].maps[5] = "zm_nuked"
+CoD.PrivateGameLobby.Experimental[2].maps[6] = "zm_tomb"
+CoD.PrivateGameLobby.Experimental[2].gameTypes = {}
+CoD.PrivateGameLobby.Experimental[2].gameTypes[1] = "zclassic"
+CoD.PrivateGameLobby.Experimental[2].gameTypes[2] = "zstandard"
+
+CoD.PrivateGameLobby.Experimental[3] = {}
+CoD.PrivateGameLobby.Experimental[3].id = "experimental_trial"
+CoD.PrivateGameLobby.Experimental[3].name = "TRIALS"
+CoD.PrivateGameLobby.Experimental[3].hintText = "Toggles Trials Station - HIGHLY EXPERIMENTAL"
+CoD.PrivateGameLobby.Experimental[3].labels = {}
+CoD.PrivateGameLobby.Experimental[3].labels[1] = "DISABLED"
+CoD.PrivateGameLobby.Experimental[3].labels[2] = "ENABLED"
+CoD.PrivateGameLobby.Experimental[3].values = {}
+CoD.PrivateGameLobby.Experimental[3].values[1] = 0
+CoD.PrivateGameLobby.Experimental[3].values[2] = 1
+CoD.PrivateGameLobby.Experimental[3].maps = {}
+CoD.PrivateGameLobby.Experimental[3].maps[1] = "zm_transit"
+CoD.PrivateGameLobby.Experimental[3].maps[2] = "zm_highrise"
+CoD.PrivateGameLobby.Experimental[3].maps[3] = "zm_buried"
+CoD.PrivateGameLobby.Experimental[3].maps[4] = "zm_prison"
+CoD.PrivateGameLobby.Experimental[3].maps[5] = "zm_nuked"
+CoD.PrivateGameLobby.Experimental[3].maps[6] = "zm_tomb"
+CoD.PrivateGameLobby.Experimental[3].gameTypes = {}
+CoD.PrivateGameLobby.Experimental[3].gameTypes[1] = "zclassic"
+CoD.PrivateGameLobby.Experimental[3].gameTypes[2] = "zstandard"
+
 --[[
 CoD.PrivateGameLobby.CustomSurvivals[3] = {}
 CoD.PrivateGameLobby.CustomSurvivals[3].id = "CUSTOM_MAP"
@@ -688,6 +781,9 @@ CoD.PrivateGameLobby.PopulateButtons_Project_Zombie = function (PrivateGameLobby
 		-- end
 		AddGameOptionsButtons(PrivateGameLobbyButtonPane, CoD.PrivateGameLobby.PlayerSelect, "dvar")
 		AddGameOptionsButtons(PrivateGameLobbyButtonPane, CoD.PrivateGameLobby.Dvars, "dvar")
+		if UIExpression.DvarString(nil, "experimental_settings") == "1" then
+			AddGameOptionsButtons(PrivateGameLobbyButtonPane, CoD.PrivateGameLobby.Experimental, "dvar")
+		end
 		PrivateGameLobbyButtonPane:registerEventHandler("enable_sliding_zm", CoD.PrivateGameLobby.EnableSlidingZombie)
 		PrivateGameLobbyButtonPane.defaultFocusButton = PrivateGameLobbyButtonPane.body.startMatchButton
 		PrivateGameLobbyButtonPane.body.buttonList.hintText:setAlpha(1)

@@ -136,11 +136,12 @@ CoD.Loading.DidYouKnow.sas = {
 	"MPTIP_WAGER_STICKS_SPYPLANE"
 }
 CoD.Loading.DidYouKnow.zombies = {
-	"TechnoOps Collection was inspired by Reapers Collection!",
+	"TechnoOps Collection was inspired by the Black Ops 3 Custom Mod, Reapers Collection!",
 	"This mod started as only a simple script, now its a whole mod with way more features! Look how far we've come!",
 	"The Exfil feature lets you finish a match in style! Similar to Cold War and Vanguard",
 	"The Rampage Statue was an attempt of the Rampage Inducer but can't be toggled off.",
-	"This mod has its own custom story!",
+	"This mod has its own custom story in Tranzit and Nuketown!",
+	"Try out Guided mode for learning the mod quests! They get added soon after the quest is released.",
 	"Crouch underneath perk machines, they may have a bonus for you!",
 	"On Tranzit, turning the power on will open all power required doors, even Pack a Punch!",
 	"The Avogadro likes to hangout near the pylon.",
@@ -646,6 +647,8 @@ GetGameType = function()
 		return "DEAD LIGHT GREEN LIGHT"
 	elseif UIExpression.DvarInt(nil,"gamemode") == 5 then
 		return "SHARPSHOOTER"
+	elseif UIExpression.DvarInt(nil,"gamemode") == 6 then
+		return "TEAM CRANKED"
 	else
 		return "Invalid Gamemode"
 	end

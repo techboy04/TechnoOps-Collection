@@ -15,14 +15,9 @@ bot_combat_think( damage, attacker, direction )
 		}
 		if(self atgoal("flee"))
 			self cancelgoal("flee");
-		if(self GetCurrentWeapon() == "none")
-			return;
-		sight = self bot_best_enemy();
-		if(!isdefined(self.bot.threat.entity))
-			return;
 		//FLEE CODE. IF ZOMBIE IS CLOSE TO BOT, BOT WILL TRY TO FIND A PLACE TO RUN AWAY
 		//LOOKING FOR ANOTHER ALTERNATIVE IF DOORS ARE CLOSED AND THE BOT CAN NOT REACH SAID PATH.
-		if(Distance(self.origin, self.bot.threat.position) <= 75)
+		if(Distance(self.origin, self.bot.threat.position) <= 75 || isdefined(damage))
 		{
 			nodes = getnodesinradiussorted( self.origin, 1024, 256, 512 );
 			nearest = bot_nearest_node(self.origin);
@@ -30,7 +25,7 @@ bot_combat_think( damage, attacker, direction )
 			{
 				foreach ( node in nodes )
 				{
-					if ( !nodesvisible( nearest, node ) && !nodescanpath( nearest, node ) )
+					if ( !nodesvisible( nearest, node ) && FindPath(self.origin, node.origin, undefined, 0, 1) )
 					{
 						self addgoal( node.origin, 24, 4, "flee" );
 						break;
@@ -38,6 +33,11 @@ bot_combat_think( damage, attacker, direction )
 				}
 			}
 		}
+		if(self GetCurrentWeapon() == "none")
+			return;
+		sight = self bot_best_enemy();
+		if(!isdefined(self.bot.threat.entity))
+			return;
 		if ( threat_dead() )
 		{
 			self bot_combat_dead();
@@ -45,8 +45,167 @@ bot_combat_think( damage, attacker, direction )
 		}
 		//ADD OTHER COMBAT TASKS HERE.
 		self bot_combat_main();
+		self bot_pickup_powerup();
+
+		// Initialize door coordination and mystery box tracking variables if not defined
+		if(!isDefined(level.door_being_opened))
+			level.door_being_opened = false;
+			
+		if(!isDefined(level.mystery_box_teddy_locations))
+			level.mystery_box_teddy_locations = [];
+		
+		// Safe door opening - prevents multiple bots from trying to open the same door
+		self bot_safely_interact_with_doors();
+		
+		// Mystery box safety check - prevents using teddy bear boxes
+		self bot_safely_use_mystery_box();
+		
+		if(is_true(level.using_bot_revive_logic))
+		{
+			self bot_revive_teammates();
+		}
 		wait 0.05; //fu difficulty
 	}
+}
+
+// Prevents multiple bots from trying to open the same door at once
+bot_safely_interact_with_doors()
+{
+	// Don't try to open doors if another bot is already doing it
+	if(is_true(level.door_being_opened))
+		return;
+
+	// Check if we're near a door
+	door_triggers = getEntArray("zombie_door", "targetname");
+	door_triggers = array_combine(door_triggers, getEntArray("zombie_debris", "targetname"));
+	door_triggers = array_combine(door_triggers, getEntArray("zombie_airlock_buy", "targetname"));
+	
+	closest_dist = 999999;
+	closest_door = undefined;
+	
+	foreach(door in door_triggers)
+	{
+		if(!isDefined(door))
+			continue;
+			
+		dist = Distance(self.origin, door.origin);
+		if(dist < closest_dist && dist < 80) // Only consider doors within 80 units
+		{
+			closest_dist = dist;
+			closest_door = door;
+		}
+	}
+	
+	// If we're near a door, try to open it safely
+	if(isDefined(closest_door))
+	{
+		// Set global flag to prevent other bots from trying at the same time
+		level.door_being_opened = true;
+		
+		// Try to open the door
+		self UseButtonPressed();
+		
+		// Wait a bit for door to process
+		wait 0.5;
+		
+		// Reset flag so other bots can try later
+		level.door_being_opened = false;
+	}
+}
+
+// Prevents bots from using mystery boxes that have teddy bears
+bot_safely_use_mystery_box()
+{
+	// Find closest mystery box
+	box_triggers = getEntArray("treasure_chest_use", "targetname");
+	
+	closest_dist = 999999;
+	closest_box = undefined;
+	
+	foreach(box in box_triggers)
+	{
+		if(!isDefined(box))
+			continue;
+			
+		dist = Distance(self.origin, box.origin);
+		if(dist < closest_dist && dist < 80) // Only consider boxes within 80 units
+		{
+			closest_dist = dist;
+			closest_box = box;
+		}
+	}
+	
+	// If we found a box and we're close to it
+	if(isDefined(closest_box))
+	{
+		// Check if this box has a teddy bear
+		box_location = closest_box.origin;
+		if(array_contains(level.mystery_box_teddy_locations, box_location))
+		{
+			// Don't use this box, it has a teddy bear
+			return;
+		}
+		
+		// Watch for teddy bear notifications
+		self thread watch_for_box_teddy(closest_box);
+		
+		// Use the box
+		self UseButtonPressed();
+	}
+}
+
+// Monitor box for teddy bear
+watch_for_box_teddy(box)
+{
+	self endon("disconnect");
+	
+	// Wait for the teddy bear notification or other game events
+	level waittill_any("weapon_fly_away_start", "teddy_bear", "box_moving");
+	
+	// When teddy bear appears, add this box location to the list of teddy locations
+	if(!array_contains(level.mystery_box_teddy_locations, box.origin))
+	{
+		level.mystery_box_teddy_locations[level.mystery_box_teddy_locations.size] = box.origin;
+	}
+}
+
+// Check if an array contains a specific value (origin)
+array_contains(array, value)
+{
+	if(!isDefined(array) || !array.size)
+		return false;
+		
+	foreach(item in array)
+	{
+		// Compare origins with a small tolerance
+		if(Distance(item, value) < 10)
+			return true;
+	}
+	
+	return false;
+}
+
+// Helper function to combine arrays
+array_combine(array1, array2)
+{
+	if(!isDefined(array1))
+		return array2;
+	
+	if(!isDefined(array2))
+		return array1;
+		
+	combined = [];
+	foreach(item in array1)
+	{
+		combined[combined.size] = item;
+	}
+	
+	foreach(item in array2)
+	{
+		combined[combined.size] = item;
+	}
+	
+	return combined;
 }
 
 bot_combat_main() //checked partially changed to match cerberus output changed at own discretion
@@ -316,7 +475,7 @@ bot_can_reload() //checked changed to match cerberus output
 
 bot_best_enemy() //checked partially changed to match cerberus output did not change while loop to foreach see github for more info
 {
-	enemies = get_round_enemy_array();
+	enemies = getaispeciesarray( level.zombie_team, "all" );
 	enemies = arraysort( enemies, self.origin );
 	i = 0;
 	while ( i < enemies.size )
@@ -502,4 +661,3 @@ threat_is_player() //checked changed at own discretion
 	}
 	return 0;
 }
-
