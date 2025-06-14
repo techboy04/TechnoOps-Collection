@@ -1,6 +1,8 @@
 # TechnoOps-Collection
 This mod is a collection of smaller mods made by me into one big script for PlutoniumT6 Zombies
 
+### How to install the mod
+https://tcwiki.techsgames.xyz/installation/getting-started-downloading-the-mod
 
 # This mod is heavily inspired by Reapers Collection - A Black Ops III mod
 
