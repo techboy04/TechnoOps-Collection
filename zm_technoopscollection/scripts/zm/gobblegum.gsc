@@ -37,7 +37,12 @@ init()
 {
 	create_dvar("gobble_debug", 0);
 	create_dvar("gobble_max_uses", 3);
-	
+
+	if(getDvarInt("gamemode") != 0)
+	{
+		return;
+	}
+
 	if(level.script == "zm_transit")
 	{
 		level thread spawnGumballMachine((-7060.83, 4147.14, -63.7768), 90); //Bus Depot
@@ -119,6 +124,7 @@ init()
 
 	register_gobblegum( "ephemeral_enhancement", "Ephemeral Enhancement", "gum_ephemeral_enhancement", ::ephemeral_enhancement_use, "activate", "Upgrade your weapon temporarily.", "pink", 0, ::ephemeral_enhancement_check, false);
 
+// Uncomment or use in another script to have a custom list of gobblegums. This WILL replace the original list of gobbles used in the machine.
 //	level.customgumslist = array("ephemeral_enhancement");
 
 	level thread reset_gobble_machine_uses();
@@ -718,7 +724,24 @@ filterGobbleGums(filteredgums, player)
 		arrayremovevalue(array, "near_death_experience");
 		arrayremovevalue(array, "nowhere_but_there");
 		arrayremovevalue(array, "phoenix_up");
+		arrayremovevalue(array, "profit_sharing");
 	}
+	
+	if(getDvar("mapname") == "zm_tomb")
+	{
+		arrayremovevalue(array, "licensed_contractor");
+	}
+	
+	if(getDvar("mapname") == "zm_prison")
+	{
+		arrayremovevalue(array, "licensed_contractor");
+	}
+	
+	if(getDvar("mapname") == "zm_nuked")
+	{
+		arrayremovevalue(array, "licensed_contractor");
+	}
+	
 	return array;
 }
 
@@ -973,7 +996,6 @@ perkaholic_use()
 		wait 0.25;
 		self maps\mp\zombies\_zm_perks::give_perk( "specialty_grenadepulldeath", 0 );
 	}
-	self._retain_perks = 1;
 }
 
 crate_power_use()

@@ -5141,54 +5141,54 @@ getsound(type)
 {
 	if(type == 1)
 	{
-		if(getDvarInt("enable_hitmarker") == 2)
+		if(getDvarInt("hit_sound") == 1)
 		{
 			return "hit_cw";
 		}
-		else if (getDvarInt("enable_hitmarker") == 3)
+		else if (getDvarInt("hit_sound") == 2)
 		{
 			return "hit_mw";
 		}
-		else if (getDvarInt("enable_hitmarker") == 4)
+		else if (getDvarInt("hit_sound") == 3)
 		{
 			return "hit_bo4";
 		}
-		else if (getDvarInt("enable_hitmarker") == 5)
+		else if (getDvarInt("hit_sound") == 4)
 		{
 			return "hit_ow";
 		}
-		else if (getDvarInt("enable_hitmarker") == 6)
+		else if (getDvarInt("hit_sound") == 5)
 		{
 			return "hit_al";
 		}
-		else if (getDvarInt("enable_hitmarker") == 7)
+		else if (getDvarInt("hit_sound") == 6)
 		{
 			return "hit_8bit";
 		}
 	}
 	else if (type == 2)
 	{
-		if(getDvarInt("enable_hitmarker") == 2)
+		if(getDvarInt("kill_sound") == 1)
 		{
 			return "kill_cw";
 		}
-		else if (getDvarInt("enable_hitmarker") == 3)
+		else if (getDvarInt("kill_sound") == 2)
 		{
 			return "kill_mw";
 		}
-		else if (getDvarInt("enable_hitmarker") == 4)
+		else if (getDvarInt("kill_sound") == 3)
 		{
 			return "kill_bo4";
 		}
-		else if (getDvarInt("enable_hitmarker") == 5)
+		else if (getDvarInt("kill_sound") == 4)
 		{
 			return "kill_ow";
 		}
-		else if (getDvarInt("enable_hitmarker") == 6)
+		else if (getDvarInt("kill_sound") == 5)
 		{
 			return "kill_al";
 		}
-		else if (getDvarInt("enable_hitmarker") == 7)
+		else if (getDvarInt("kill_sound") == 6)
 		{
 			return "kill_8bit";
 		}
@@ -14820,6 +14820,11 @@ notify_player_action(message)
 
 createGuidedHUD()
 {
+	if(getDvarInt("gamemode") != 0)
+	{
+		return;
+	}
+	
 	level endon("end_game");
 
 	level.guidedHUD = newhudelem();
@@ -14841,7 +14846,12 @@ updateGuidedHUD(text)
 {
 	level.guidedHUD notify ("reset_hud");
 	level.guidedHUD endon ("reset_hud");
-	
+
+	if(getDvarInt("gamemode") != 0)
+	{
+		return;
+	}
+
 	fade_speed = 0.4;
 	text_delay = 3;
 	
@@ -14875,6 +14885,11 @@ removeGuidedHUD()
 
 updateGuidedHUDIcon(destination, icon, includeDistanceText)
 {
+	if(getDvarInt("gamemode") != 0)
+	{
+		return;
+	}
+	
 	if(!isDefined(includedDistanceText))
 	{
 		includedDistanceText = false;

@@ -34,10 +34,12 @@ init()
 	level.soulboxcount = 0;
 	level.pausedoomsday = false;
 	level.iscardclean = false;
+	level.talkerroundpassed = false;
 	level thread earthquake_sound();
 	level thread local_audio_file();
 	level thread facility_talk();
 	level thread setup_sidestuff();
+	level thread talk_round_think();
 	level thread spawn_shootable_power((517.701, -225.238, -1.60953));
 	
 	custom_secret_song_spawns(array((638.568, 629.444, -20.5512),(-1037.25, 13.6642, -62.3842),(901.645, 461.189, -19.5676)),array(-89.5405,156.158,16.9171),"mus_custom_nuketown_ee");
@@ -363,6 +365,12 @@ give_player_all_perks()
 
 talking_to_voice()
 {
+	
+	if(!can_talk_round())
+	{
+		return;
+	}
+	
 	lines = array("Told Broken Arrow it was a bad idea having a facility here. But they dont ever listen.","Marlton! What the fuck did you do to my MREs!","I saw a space station looking into the Moon, maybe it has something to do with this mess.","Things keep dropping from the sky, where did they even come from?","Those manniquins creep me out. Cant imagine what they look like now.","Do you hear the voices Marlton? Commanding me to do something.");
 	audio = array("vox_nuketown_bunker_1","vox_nuketown_bunker_2","vox_nuketown_bunker_3","vox_nuketown_bunker_4","vox_nuketown_bunker_5","vox_nuketown_bunker_6");
 	duration =  array(6,3,4,4,4,4);
@@ -371,6 +379,28 @@ talking_to_voice()
 		level notify ("bunker_talk", audio[level.bunkerchatter]);
 		do_vox_subtitles("Voice", lines[level.bunkerchatter], duration[level.bunkerchatter], "");
 		level.bunkerchatter += 1;
+		level.talkerroundpassed = false;
+	}
+}
+
+can_talk_round()
+{
+	if(level.talkerroundpassed == true)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+talk_round_think()
+{
+	for(;;)
+	{
+		level waittill ("between_round_over");
+		level.talkerroundpassed = true;
 	}
 }
 

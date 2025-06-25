@@ -358,6 +358,12 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "hitmarker_type") == "" then
 		Engine.Exec(nil, "seta hitmarker_type 0")
 	end
+	if UIExpression.DvarString(nil, "hit_sound") == "" then
+		Engine.Exec(nil, "seta hit_sound 0")
+	end
+	if UIExpression.DvarString(nil, "kill_sound") == "" then
+		Engine.Exec(nil, "seta kill_sound 0")
+	end
 	if UIExpression.DvarString(nil, "enable_all_weapons") == "" then
 		Engine.Exec(nil, "seta enable_all_weapons 1")
 	end
