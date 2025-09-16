@@ -649,6 +649,10 @@ GetGameType = function()
 		return "SHARPSHOOTER"
 	elseif UIExpression.DvarInt(nil,"gamemode") == 6 then
 		return "TEAM CRANKED"
+	elseif UIExpression.DvarInt(nil,"gamemode") == 7 then
+		return "ZOMBIE SNACKS"
+	elseif UIExpression.DvarInt(nil,"gamemode") == 8 then
+		return "GUM GAME"
 	else
 		return "Invalid Gamemode"
 	end

@@ -33,7 +33,7 @@ main()
 	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
 	replacefunc(maps\mp\zm_transit::include_equipment_for_level, ::include_equipment_for_level);
 //	replaceFunc(maps\mp\zm_transit_sq::richtofen_sidequest_c, ::custom_richtofen_sidequest_c);
-
+	
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)
 	{
 		replacefunc(maps\mp\zm_transit_classic::diner_hatch_access, ::diner_hatch_access_new);
@@ -45,7 +45,7 @@ main()
 		replacefunc(maps\mp\zombies\_zm_equip_electrictrap::startelectrictrapdeploy, ::startelectrictrapdeploy_new);
 		replacefunc(maps\mp\zombies\_zm_equip_turret::startturretdeploy, ::startturretdeploy_new);
 	}
-
+	replacefunc(maps\mp\zm_transit_lava::player_lava_damage, ::player_lava_damage);
     level thread onPlayerConnect();
 }
 
@@ -847,4 +847,82 @@ custom_richtofen_sidequest_c()
 	player = get_players();
 	player[ 0 ] setclientfield( "screecher_sq_lights", 0 );
 	level thread richtofen_sidequest_complete_check( "C_complete" );
+}
+
+player_lava_damage( trig )
+{
+    self endon( "zombified" );
+    self endon( "death" );
+    self endon( "disconnect" );
+    max_dmg = 15;
+    min_dmg = 5;
+    burn_time = 1;
+
+    if ( isdefined( self.is_zombie ) && self.is_zombie )
+        return;
+
+    self thread player_stop_burning();
+
+    if ( isdefined( trig.script_float ) )
+    {
+        max_dmg = max_dmg * trig.script_float;
+        min_dmg = min_dmg * trig.script_float;
+        burn_time = burn_time * trig.script_float;
+
+        if ( burn_time >= 1.5 )
+            burn_time = 1.5;
+    }
+
+    if ( !isdefined( self.is_burning ) && is_player_valid( self ) && self player_can_burn())
+    {
+        self.is_burning = 1;
+        maps\mp\_visionset_mgr::vsmgr_activate( "overlay", "zm_transit_burn", self, burn_time, level.zm_transit_burn_max_duration );
+        self notify( "burned" );
+
+        if ( isdefined( trig.script_float ) && trig.script_float >= 0.1 )
+            self thread player_burning_fx();
+
+        if ( !self hasperk( "specialty_armorvest" ) || self.health - 100 < 1 )
+        {
+            radiusdamage( self.origin, 10, max_dmg, min_dmg );
+            wait 0.5;
+            self.is_burning = undefined;
+        }
+        else
+        {
+            if ( self hasperk( "specialty_armorvest" ) )
+                self dodamage( 15, self.origin );
+            else
+                self dodamage( 1, self.origin );
+
+            wait 0.5;
+            self.is_burning = undefined;
+        }
+    }
+}
+
+player_can_burn()
+{
+	return true;
+	
+	if(getDvarInt("enable_lavadamage") == 0)
+	{
+		return false;
+	}
+	else if(getDvarInt("enable_lavadamage") == 1)
+	{
+		return true;
+	}
+	else if(getDvarInt("enable_lavadamage") == 2)
+	{
+		if(!self hasperk ("specialty_divetonuke_zombies"))
+		{
+			return true;
+		}
+		return false;
+	}
+	else
+	{
+		return false;
+	}
 }

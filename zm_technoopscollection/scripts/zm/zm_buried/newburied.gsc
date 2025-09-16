@@ -9,6 +9,7 @@ main()
 	{
 		replacefunc(maps\mp\zombies\_zm_equip_subwoofer::startsubwooferdeploy, ::startsubwooferdeploy_new);
 	}
+	replacefunc(maps\mp\zm_buried::buried_special_weapon_magicbox_check, ::buried_special_weapon_magicbox_check);
 }
 
 
@@ -63,4 +64,20 @@ startsubwooferdeploy_new( weapon, armed )
 
         self notify( "subwoofer_cleanup" );
     }
+}
+
+buried_special_weapon_magicbox_check( weapon )
+{
+    if ( weapon == "time_bomb_zm" )
+    {
+        players = get_players();
+
+        for ( i = 0; i < players.size; i++ )
+        {
+            if ( is_player_valid( players[i], undefined, 1 ) && players[i] is_player_tactical_grenade( weapon ) )
+                return false;
+        }
+    }
+
+    return true;
 }

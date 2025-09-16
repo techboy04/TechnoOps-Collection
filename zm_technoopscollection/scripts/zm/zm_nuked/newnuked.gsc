@@ -7,6 +7,7 @@ main()
 {
 	replacefunc(maps\mp\zm_nuked_perks::perks_from_the_sky, ::new_perks_from_the_sky);
 	replacefunc(maps\mp\zm_nuked::update_doomsday_clock, ::new_update_doomsday_clock);
+	replacefunc(maps\mp\zm_nuked::nuked_special_weapon_magicbox_check, ::nuked_special_weapon_magicbox_check);
 }
 
 new_perks_from_the_sky()
@@ -157,4 +158,9 @@ finishedperkssound()
 		ent playsound( "zmb_clock_chime" );
 		wait 2;
 	}
+}
+
+nuked_special_weapon_magicbox_check( weapon )
+{
+    return true;
 }

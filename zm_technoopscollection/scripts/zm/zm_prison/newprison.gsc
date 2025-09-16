@@ -30,6 +30,9 @@ main()
 	replacefunc(maps\mp\zm_alcatraz_sq::electric_chair_player_thread, ::electric_chair_player_thread_new);
 	replacefunc(maps\mp\zm_alcatraz_sq::electric_chair_trigger_thread, ::electric_chair_trigger_thread_new);
 	replacefunc(maps\mp\zm_prison::zm_player_fake_death, ::zm_player_fake_death_new);
+	
+	replacefunc(maps\mp\zm_alcatraz_utility::check_for_special_weapon_limit_exist, ::check_for_special_weapon_limit_exist);
+	
 	if (getDvarInt("afterlife_doesnt_down") == 1)
 	{
 		replacefunc(maps\mp\zombies\_zm_afterlife::afterlife_leave, ::afterlife_leave_new);
@@ -878,4 +881,51 @@ zm_player_fake_death_new( vdir )
         self thread fall_down( vdir, stance );
         wait 1;
     }
+}
+
+check_for_special_weapon_limit_exist( weapon )
+{
+	if ( weapon != "blundergat_zm" && weapon != "minigun_alcatraz_zm" )
+        return true;
+
+    players = get_players();
+    count = 0;
+
+    if ( weapon == "blundergat_zm" )
+    {
+        if ( self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade( "blundersplat_zm" ) )
+            return false;
+
+        if ( self afterlife_weapon_limit_check( "blundergat_zm" ) )
+            return false;
+
+        limit = level.limited_weapons["blundergat_zm"];
+    }
+    else
+    {
+        if ( self afterlife_weapon_limit_check( "minigun_alcatraz_zm" ) )
+            return false;
+
+        limit = level.limited_weapons["minigun_alcatraz_zm"];
+    }
+
+    for ( i = 0; i < players.size; i++ )
+    {
+        if ( weapon == "blundergat_zm" )
+        {
+            if ( players[i] has_weapon_or_upgrade( "blundersplat_zm" ) || isdefined( players[i].is_pack_splatting ) && players[i].is_pack_splatting )
+            {
+                count++;
+                continue;
+            }
+        }
+
+        if ( players[i] afterlife_weapon_limit_check( weapon ) )
+            count++;
+    }
+
+    if ( count >= limit )
+        return false;
+
+    return true;
 }

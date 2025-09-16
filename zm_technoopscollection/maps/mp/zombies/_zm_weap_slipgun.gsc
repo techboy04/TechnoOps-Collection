@@ -59,7 +59,10 @@ wait_init_damage()
         wait 1;
 
     wait 1;
-    level.slipgun_damage = maps\mp\zombies\_zm::ai_zombie_health( level.zombie_vars["slipgun_max_kill_round"] );
+    if(isDefined(level.zombie_vars["slipgun_max_kill_round"]))
+	{
+		level.slipgun_damage = maps\mp\zombies\_zm::ai_zombie_health( level.zombie_vars["slipgun_max_kill_round"] );
+	}
     level.slipgun_damage_mod = "MOD_PROJECTILE_SPLASH";
 }
 

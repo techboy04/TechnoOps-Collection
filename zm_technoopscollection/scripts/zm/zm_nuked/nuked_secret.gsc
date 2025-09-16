@@ -34,13 +34,21 @@ init()
 	level.soulboxcount = 0;
 	level.pausedoomsday = false;
 	level.iscardclean = false;
+	level.hasid = false;
 	level.talkerroundpassed = false;
+	level.soulboxphase = 0;
 	level thread earthquake_sound();
 	level thread local_audio_file();
 	level thread facility_talk();
 	level thread setup_sidestuff();
 	level thread talk_round_think();
 	level thread spawn_shootable_power((517.701, -225.238, -1.60953));
+	
+	if(getDvarInt("guided_mode") == 1)
+	{
+		createGuidedHUD();
+		level thread GuidedModeChecks();
+	}
 	
 	custom_secret_song_spawns(array((638.568, 629.444, -20.5512),(-1037.25, 13.6642, -62.3842),(901.645, 461.189, -19.5676)),array(-89.5405,156.158,16.9171),"mus_custom_nuketown_ee");
 }
@@ -141,6 +149,7 @@ nukedEEsequence()
 	do_vox_subtitles("Voice", "My level is too low to access it.", 2, "vox_nuketown_intro_7");
 	do_vox_subtitles("Voice", "A high level ID tag is out there somewhere.", 3, "vox_nuketown_intro_8");
 	do_vox_subtitles("Voice", "They kept their cards inside a book in attempt to protect them from the missiles. Theyre not very bright.", 6, "vox_nuketown_intro_9");
+	level notify ("update_guided");
 	level.cantalktobunker = true;
 	
 	level thread spawnIDPart();
@@ -150,8 +159,10 @@ nukedEEsequence()
 	do_vox_subtitles("Voice", "That card seems dirty. The computer will definiately not be able to read it.", 4, "vox_nuketown_radio_2");
 	level.cantalktobunker = true;
 	
+	level.soulboxphase = 1;
 	spawnSoulBoxStart();
 	do_vox_subtitles("Voice", "Seems like it did half the job, maybe find another one to finish the process.", 4, "vox_nuketown_radio_3");
+	level.soulboxphase = 2;
 	spawnSoulBoxStart();
 	do_vox_subtitles("Voice", "It looks readable! Place it near the Bunker, I can teleport it in here.", 4, "vox_nuketown_radio_4");
 	do_vox_subtitles("Voice", "The teleporter is a prototype, too small to teleport me and Marlton out anyways.", 6, "vox_nuketown_radio_5");
@@ -168,6 +179,7 @@ nukedEEsequence()
 	level notify ("facility_talk", "vox_nuketown_facility_2");
 	do_vox_subtitles("P.A.", "ID Accepted. Welcome Back Frank McCain.", 4, "");
 	do_vox_subtitles("Voice", "This UI is a bit confusing, give me a few.", 3, "vox_nuketown_radio_7");
+	level notify ("update_guided");
 	level.cantalktobunker = true;
 	
 	waiting_through_ui();
@@ -178,6 +190,7 @@ nukedEEsequence()
 	do_vox_subtitles("P.A.", "Unable to identify security connection.", 3, "");
 	do_vox_subtitles("Voice", "Always something with this damn place!", 3, "vox_nuketown_radio_10");
 	do_vox_subtitles("Voice", "I got an idea, we can overload the protocol! Fuel this energy orb.", 5, "vox_nuketown_radio_11");
+	level notify ("update_guided");
 	level.cantalktobunker = true;
 	
 	payload_step_start();
@@ -201,6 +214,7 @@ nukedEEsequence()
 	level notify ("move_defusal_nukes");
 	do_vox_subtitles("P.A.", "Connection Interfered! Self Destruct Activating...", 4, "");
 	do_vox_subtitles("Voice", "No! No! No! I cant die in here! Please defuse those bombs!", 5, "vox_nuketown_radio_12");
+	level notify ("update_guided");
 	level.cantalktobunker = true;
 	level.pausedoomsday = true;
 	level thread maintain_defusal_zombie_count();
@@ -222,23 +236,123 @@ nukedEEsequence()
 	level.zombie_total = 14;
 	level.pausedoomsday = false;
 	level.completedmodmainquest = true;
-	if(getDvarInt("stats_completed_quest_2") != 1)
-	{
-		setDvar("stats_completed_quest_2", 1);
-	}
-	if(getDvarInt("continue_game_after_quest") == 1)
-	{
-		do_vox_subtitles("Voice", "Come to the bunker. I got some gifts for you!", 2, "vox_nuketown_radio_14");
-		level thread spawnRewards((-1351.54, 995.177, -63.875));
-		foreach (player in level.players)
-		{
-			player thread give_player_all_perks();
-		}
-	}
-	else
+	if(getDvarInt("guided_mode") == 1)
 	{
 		level notify ("end_game");
 	}
+	else
+	{
+		if(getDvarInt("stats_completed_quest_2") != 1)
+		{
+			setDvar("stats_completed_quest_2", 1);
+		}
+		if(getDvarInt("continue_game_after_quest") == 1)
+		{
+			do_vox_subtitles("Voice", "Come to the bunker. I got some gifts for you!", 2, "vox_nuketown_radio_14");
+			level thread spawnRewards((-1351.54, 995.177, -63.875));
+			foreach (player in level.players)
+			{
+				player thread give_player_all_perks();
+			}
+		}
+		else
+		{
+			level notify ("end_game");
+		}
+	}
+}
+
+GuidedModeChecks()
+{
+	level waittill ("start_of_round");
+	updateGuidedHUDIcon((-1352.67, 995.592, -32.7674), "objective_marker", true);
+	updateGuidedHUD("Interact with the Bunker to get the scientists attention.");
+	while(level.activatepower != true)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((532.864, -219.015, -3.24057), "objective_marker", true);
+	updateGuidedHUD("Shoot the transformer to turn on the power.");
+	level waittill ("secret_power_on");
+	level waittill ("update_guided");
+	updateGuidedHUDIcon((913.517, 306.164, 79.125), "search_marker", true);
+	updateGuidedHUD("Search and pick up the dirty ID card.");
+	while(level.hasid != true)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1399.2, 504.485, -57.875), "objective_marker", true);
+	updateGuidedHUD("Place the ID in the fireplace to begin the first part of the cleaning process.");
+	while(level.soulboxactive != 1)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((1399.2, 504.485, -57.875), "objective_marker", true);
+	updateGuidedHUD("Kill zombies to fuel the fireplace.");
+	while(level.soulboxactive != 0)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((-893.538, 715.205, -13.875), "objective_marker", true);
+	updateGuidedHUD("Pick up the ID and take it to the oven to finish cleaning the ID.");
+	while(level.soulboxactive != 1)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((-893.538, 715.205, -13.875), "objective_marker", true);
+	updateGuidedHUD("Kill zombies to fuel the oven.");
+	while(level.soulboxactive != 0)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUDIcon((-1352.67, 995.592, -32.7674), "objective_marker", true);
+	updateGuidedHUD("Pick up the ID from the oven and bring it to the bunker.");
+	level waittill ("secret_id_clean");
+	level waittill ("update_guided");
+	updateGuidedHUDIcon((-1352.67, 995.592, -32.7674), "", true);
+	rounds = level.round_number + 3;
+	updateGuidedHUD("Survive until round " + rounds);
+	level waittill ("waiting_through_ui_done");
+	level waittill ("update_guided");
+	updateGuidedHUDIcon((-1430.84, 1096.35, -63.875), "objective_marker", true);
+	updateGuidedHUD("Begin the Payload overload.");
+	while(level.payloadstarted != 1)
+	{
+		wait 0.1;
+	}
+	updateGuidedHUD("Survive and Kill zombies to charge the orb.");
+	level waittill ("payload_over");
+	updateGuidedHUDIcon((-1352.67, 995.592, -32.7674), "objective_marker", true);
+	updateGuidedHUD("Interact with the Orb to finish the process.");
+	while(level.holdround != true)
+	{
+		wait 0.1;
+	}
+	level waittill ("move_defusal_nukes");
+	level waittill ("update_guided");
+	removeGuidedHUDIcon();
+	updateGuidedHUD("Defuse the bombs.");
+	while(level.holdround != false)
+	{
+		wait 0.1;
+	}
+
+	removeGuidedHUD();
+}
+
+createBombIcon()
+{
+	bombIcon = newHudElem();
+    bombIcon.x = self.origin[0];
+    bombIcon.y = self.origin[1];
+	bombIcon.z = self.origin[2] + 40;
+	bombIcon.color = ( 0.5, 0.5, 1 );
+    bombIcon.isshown = 1;
+    bombIcon.archived = 0;
+    bombIcon setshader( "objective_marker", 4, 4 );
+    bombIcon setwaypoint( 0, "objective_marker", false );
+	self waittill ("bomb_defused");
+	bombIcon destroy();
 }
 
 local_audio_file()
@@ -337,7 +451,7 @@ give_player_all_perks()
 		else
 		{
 			if ( self hasperk( perk ) || self maps\mp\zombies\_zm_perks::has_perk_paused( perk ) )
-			{
+			{                                 
 			}
 			else
 			{
@@ -421,6 +535,8 @@ spawnIDPart()
 		if(i usebuttonpressed())
 		{
 			level notify ("secret_id_pickedup");
+			level.hasid = true;
+			level thread notify_player_action(i.name + " picked up the ID");
 			CardPickup delete();
 			CardModel delete();
 			break;
@@ -459,6 +575,7 @@ spawnSoulboxStart()
 		SoulBoxStart waittill( "trigger", i );
 		if(i usebuttonpressed())
 		{
+			level.soulboxactive = 1;
 			add_soul_box(location, -76, 450, 20, "p_glo_books_single");
 			SoulBoxStart delete();
 			break;
@@ -498,6 +615,8 @@ spawnSoulboxPickup()
 //				level.iscardclean = true;
 			}
 			
+			level thread notify_player_action(i.name + " picked up the ID");
+			
 			SoulBoxPickup delete();
 			SoulBoxModel delete();
 			break;
@@ -529,7 +648,7 @@ add_soul_box(location, rotation, range, soul_requirement, box_model)
 	soulBox notify ("soul_box_done");
 	soulBox playsound ("zmb_laugh_child");
 	soulBox delete();
-	
+	level.soulboxactive = 0;
 	spawnSoulboxPickup();
 }
 
@@ -618,6 +737,7 @@ waiting_through_ui()
 			do_vox_subtitles("Voice", "Who made this? Monkeys?", 3, "vox_nuketown_radio_8");
 		}
 	}
+	level notify ("waiting_through_ui_done");
 }
 
 nuked_standard_intermission()
@@ -724,6 +844,19 @@ payload_step_start()
 	}
 }
 
+loop_payload_icon()
+{
+	level endon ("payload_over");
+	for(;;)
+	{
+		if(getDvarInt("guided_mode") == 1)
+		{
+			updateGuidedHUDIcon(self.origin, "objective_marker", true);
+			wait 0.01;
+		}
+	}
+}
+
 spawn_power_effect(origin)
 {
     power = spawn( "script_model", origin);
@@ -747,6 +880,7 @@ spawn_power_effect(origin)
 
 payload_step()
 {
+	level.payloadstarted = 1;
 	level.holdround = true;
 	level.zombie_total = 0;
 	zombies = getaiarray( level.zombie_team );
@@ -758,6 +892,8 @@ payload_step()
 	
 	level thread playpayloadintromusic();
 	paths = array((-1473.46, 343.727, -62.875),(-928.396, 475.883, -55.875),(-862.63, 459.467, 80.9992),(921.89, 316.634, 79.125),(840.782, 639.248, -56.875),(1472.5, 778.073, -70.521),(-1352.49, 995.398, -63.875));
+
+	self thread loop_payload_icon();
 
 	foreach (path in paths)
 	{
@@ -778,6 +914,7 @@ payload_step()
 	FinalEncounterTrigger = spawn( "trigger_radius", (self.origin), 50, 50, 50 );
 	FinalEncounterTrigger setHintString("Press ^3&&1 ^7to send the Orb \n[Final Encounter] All Players need to be nearby.");
 	FinalEncounterTrigger setcursorhint( "HINT_NOICON" );
+
 	for(;;)
 	{
 		FinalEncounterTrigger waittill( "trigger", i );
@@ -941,6 +1078,8 @@ spawn_defuse_machines(location, angle)
 	defusalBomb moveto(ending_location,10);
 	defusalBomb waittill("movedone");
 
+	defusalTrigger thread createBombIcon();
+
 	defusalTrigger setHintString("Press ^3&&1 ^7to defuse.");
 	defusalTrigger.candefuse = true;
 	defusalTrigger.defused = false;
@@ -978,6 +1117,7 @@ spawn_defuse_machines(location, angle)
 			}
 			else
 			{
+				level thread notify_player_action(i.name + " successfully defused a bomb");
 				defusalTrigger setHintString("Bomb Defused!");
 			}
 		}
@@ -1122,7 +1262,14 @@ nukedefusalhud()
 start_nuke_segment()
 {
 	level.holdround = true;
-	level.nuketimer = 100;
+	if(getDvarInt("guided_mode") == 1)
+	{
+		level.nuketimer = 500;
+	}
+	else
+	{
+		level.nuketimer = 100;
+	}
 	level.zombie_total = 0;
 	zombies = getaiarray( level.zombie_team );
 	foreach (i in zombies)

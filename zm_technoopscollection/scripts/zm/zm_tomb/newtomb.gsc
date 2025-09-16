@@ -45,6 +45,7 @@ main()
 	
 	replacefunc(maps\mp\zm_tomb_tank::tank_ran_me_over, ::tank_ran_me_over_new);
 	replacefunc(maps\mp\zm_tomb_giant_robot::giant_robot_head_player_eject_thread, ::giant_robot_head_player_eject_thread_new);
+	replacefunc(maps\mp\zm_tomb::tomb_special_weapon_magicbox_check, ::tomb_special_weapon_magicbox_check);
 	
 }
 
@@ -407,4 +408,23 @@ giant_robot_head_player_eject_thread_new( m_linkpoint, str_tube, b_timeout )
     wait( n_post_eject_time );
     self.ignoreme = 0;
     self maps\mp\zm_tomb_giant_robot_ffotd::giant_robot_head_player_eject_end();
+}
+
+tomb_special_weapon_magicbox_check( weapon )
+{
+    if ( weapon == "beacon_zm" )
+    {
+        if ( isdefined( self.beacon_ready ) && self.beacon_ready )
+            return true;
+        else
+            return false;
+    }
+
+    if ( isdefined( level.zombie_weapons[weapon].shared_ammo_weapon ) )
+    {
+        if ( self has_weapon_or_upgrade( level.zombie_weapons[weapon].shared_ammo_weapon ) )
+            return false;
+    }
+
+    return true;
 }

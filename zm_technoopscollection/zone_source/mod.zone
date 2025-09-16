@@ -45,6 +45,7 @@ xmodel,p6_zm_tm_crate_01_short
 material,hud_icon_exfil
 material,hud_icon_rampage
 material,hud_icon_reward
+material,hud_player_icon
 
 material,objective_marker
 material,defense_marker
@@ -61,6 +62,7 @@ image,~-gp6_zm_al_audio_headset_icon_d
 material,mc/mtl_p6_zm_al_audio_headset_icon
 xmodel,p6_zm_al_audio_headset_icon
 
+xmodel,zombie_pickup_perk_bottle
 xmodel,zombie_z_money_icon
 image,specialty_2x_zombies
 image,specialty_firesale_zombies
@@ -201,8 +203,13 @@ script,scripts/zm/zm_prison/9lives.gsc
 script,scripts/zm/zm_prison/newprison.gsc
 script,scripts/zm/zm_tomb/newtomb.gsc
 script,scripts/zm/zm_tomb/gungame_tomb.gsc
+script,scripts/zm/zm_tomb/gobblegum_origins.gsc
 script,scripts/zm/zm_nuked/newnuked.gsc
 script,scripts/zm/zm_buried/newburied.gsc
 script,scripts/zm/aats.gsc
 script,scripts/zm/zm_nuked/nuked_secret.gsc
+script,clientscripts/mp/zombies/player_overlay.csc
+
+stringtable,zm/gametypestable.csv
+
 soundbank,mod.all

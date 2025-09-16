@@ -221,7 +221,7 @@ CoD.InitArchiveDvars = function()
 		Engine.Exec(nil, "seta tranzit_tedd_tracker 1")
 	end
 	if UIExpression.DvarString(nil, "enable_lavadamage") == "" then
-		Engine.Exec(nil, "seta enable_lavadamage 0")
+		Engine.Exec(nil, "seta enable_lavadamage 1")
 	end
 	if UIExpression.DvarString(nil, "solo_tombstone") == "" then
 		Engine.Exec(nil, "seta solo_tombstone 1")
@@ -232,8 +232,8 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "enable_weaponanimation") == "" then
 		Engine.Exec(nil, "seta enable_weaponanimation 1")
 	end
-	if UIExpression.DvarString(nil, "perk_limit") == "" then
-		Engine.Exec(nil, "seta perk_limit 10")
+	if UIExpression.DvarString(nil, "perk_limit") == "" or UIExpression.DvarInt(nil, "perk_limit") <= 10 then
+		Engine.Exec(nil, "seta perk_limit 9")
 	end
 	if UIExpression.DvarString(nil, "enable_fasttravel") == "" then
 		Engine.Exec(nil, "seta enable_fasttravel 1")
@@ -416,7 +416,7 @@ CoD.InitArchiveDvars = function()
 		Engine.Exec(nil, "seta continue_game_after_quest 1")
 	end
 	if UIExpression.DvarString(nil, "notify_players_actions") == "" then
-		Engine.Exec(nil, "seta notify_players_actions 0")
+		Engine.Exec(nil, "seta notify_players_actions 1")
 	end
 	if UIExpression.DvarString(nil, "guided_mode") == "" then
 		Engine.Exec(nil, "seta guided_mode 0")
@@ -424,6 +424,15 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "experimental_settings") == "" then
 		Engine.Exec(nil, "seta experimental_settings 0")
 	end
+	if UIExpression.DvarString(nil, "tranzit_alpha_round_end") == "" then
+		Engine.Exec(nil, "seta tranzit_alpha_round_end 1")
+	end
+	if UIExpression.DvarString(nil, "do_revived_sound") == "" then
+		Engine.Exec(nil, "seta do_revived_sound 0")
+	end
+	if UIExpression.DvarString(nil, "endgame_restart_map") == "" then
+		Engine.Exec(nil, "seta endgame_restart_map 0")
+	end	
 end
 
 LUI.createMenu.main = function()

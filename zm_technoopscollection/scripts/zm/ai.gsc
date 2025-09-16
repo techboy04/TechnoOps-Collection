@@ -264,29 +264,13 @@ bot_buy_box()
                 if(shouldTake)
                 {
                     // Try multiple box interaction methods to ensure it works
-                    if(isDefined(activeBox.unitrigger_stub) && isDefined(activeBox.unitrigger_stub.trigger))
-                    {
-                        activeBox.unitrigger_stub.trigger notify("trigger", self);
-                    }
-                    else if(isDefined(activeBox.zbarrier) && isDefined(activeBox.zbarrier.weapon_string))
+                    if(isDefined(activeBox.zbarrier) && isDefined(activeBox.zbarrier.weapon_string))
                     {
                         // Give weapon directly to avoid box interaction bugs
                         self TakeWeapon(currentWeapon);
                         self GiveWeapon(boxWeapon);
                         self SwitchToWeapon(boxWeapon);
                         self SetSpawnWeapon(boxWeapon);
-                        
-                        // End the box weapon state
-                        if(isDefined(activeBox))
-                        {
-                            activeBox notify("weapon_grabbed");
-                            activeBox.weapon_out = 0;
-                        }
-                    }
-                    else
-                    {
-                        // Last resort, try to interact with the box directly
-                        activeBox notify("trigger", self);
                     }
                     
                     // Set spawn weapon to remember this is our weapon
@@ -722,6 +706,8 @@ spawn_bot()
         return;
     }
     
+	bot.name = "Balls";
+	
     debug_text("^3Waiting for bot to spawn...");
     bot waittill("spawned_player");
     debug_text("^2Bot spawned, configuring...");

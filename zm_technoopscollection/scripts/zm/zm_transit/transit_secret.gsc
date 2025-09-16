@@ -37,9 +37,6 @@ main()
 	precachemodel("p6_zm_tm_generator_pump");
 	precachemodel("p6_zm_tm_barbedwire_tube");
 	precachemodel("p6_zm_tm_barbedwire_blockade");
-	precacheshader("objective_marker");
-	precacheshader("defense_marker");
-	precacheshader("search_marker");
 
 	replacefunc(maps\mp\zombies\_zm::round_spawn_failsafe, ::round_spawn_failsafe_new);
     replaceFunc(maps\mp\zm_transit_distance_tracking::delete_zombie_noone_looking, ::delete_zombie_noone_looking);
@@ -55,7 +52,7 @@ init()
 	
 	custom_secret_song_spawns(array((-6304.36, 5337.64, -55.875),(1747.24, -1438.61, -55.875),(-6496.36, -7859.64, 6.45054)), array(45,-134.287,-45), "mus_custom_transit_ee");
 	
-	if(getDvar("mapname") == "zm_transit" && getDvar( "g_gametype" ) == "zclassic" && getDvarInt("gamemode") == 0)
+	if(getDvar("mapname") == "zm_transit" && getDvar( "g_gametype" ) == "zclassic" && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 8))
 	{
 
 	}
@@ -757,6 +754,7 @@ spawnDiggerMachine(location)
 	
 	level thread changeZombieTarget();
 	level thread step2defensehud();
+	level thread minion_spawner_defense();
 	
 	level.defensemode = true;
 	
@@ -912,7 +910,7 @@ quest_zombie()
 
 unused_override()
 {
-	if(self.turned)
+	if(isDefined(self.turned) && self.turned)
 	{
 		//attack zombies
 	}
@@ -1297,6 +1295,7 @@ finalEncounterSequence()
 	level thread startDefenseHorde();
 	
 	level thread finaldefensehud();
+	level thread minion_spawner_defense();
 	foreach (player in level.players)
 	{
 		player thread finaldefensehealthbar();
@@ -2245,6 +2244,7 @@ force_spawn_boss(origin)
 	level thread boss_cloud_update_fx();
 	level thread playbossmusic();
 	level.bossentity.isInvulnerable = 1;
+	level.bossentity.isBoss = 1;
 	level thread boss_out_of_bounds();
 	level thread boss_intro_quotes();
 	level.the_bus bus_power_off();
@@ -2263,19 +2263,22 @@ players_are_near(origin, distance)
 	num = 0;
 	foreach(player in level.players)
 	{
-		if(distance(player.origin, origin) < distance)
+		if(!isDefined(player.bot))
 		{
-			num += 1;
+			if(distance(player.origin, origin) < distance)
+			{
+				num += 1;
+			}
 		}
 	}
-	
-	max_players = level.players.size;
+
+	max_players = 0;
 	
 	foreach(player in level.players)
 	{
-		if(isDefined(player.bot))
+		if(!isDefined(player.bot))
 		{
-			max_players -= 1;
+			max_players += 1;
 		}
 	}
 	
@@ -2302,7 +2305,7 @@ infinite_zombies()
 {
 	while(isDefined(level.bossentity))
 	{
-		level.zombie_total = 20;
+		level.zombie_total = 15;
 		wait 0.1;
 	}
 	level.zombie_total = 0;
@@ -2621,6 +2624,30 @@ shoot_bolt_wait( animname, enemy )
 	earthquake( 0.7, 1, self.origin, 1500 );
 }
 
+minion_spawner_defense()
+{
+	level endon ("end_quest_rage");
+	level endon ("stop_endless_horde");
+	for(;;)
+	{
+		count = 0;
+		zombies = getaiarray( level.zombie_team );
+		foreach(zombie in zombies)
+		{
+			if(isDefined(zombie.isminion) && zombie.isminion == true)
+			{
+				count += 1;
+			}
+		}
+		if(count <= 5)
+		{
+			spawn_regular_minion(1);
+		}
+		
+		wait randomfloatrange(5,60);
+	}
+}
+
 minion_round_watcher()
 {
 	level endon ("boss_died");
@@ -2692,9 +2719,16 @@ boss_status()
 				level thread spawn_wave_minions(phase);
 				level.bossentity thread phase_watch();
 				level waittill ("minions_eliminated");
-				if(phase == halfsies)
+				if(getDvarInt("guided_mode") == 1)
 				{
 					level thread maps\mp\zombies\_zm_powerups::specific_powerup_drop("full_ammo", (1446.1, -121.101, -61.875));
+				}
+				else
+				{
+					if(phase == halfsies)
+					{
+						level thread maps\mp\zombies\_zm_powerups::specific_powerup_drop("full_ammo", (1446.1, -121.101, -61.875));
+					}
 				}
 				phase += 1;
 			}
@@ -3161,9 +3195,14 @@ spawnBossStart()
 		{
 			if(players_are_near(bossStartTrigger.origin, 100))
 			{
+				bossStartModel thread electricity_towards_boss((1443,-520,55));
+				bossStartModel moveto((1443,-520,55),8);
+				bossStartModel waittill("movedone");
 				level.bossstarted = 1;
 				level thread force_spawn_boss((1443,-520,55));
 				thread nuke_flash(3);
+				earthquake( 1, 2, (1443,-520,55), 1000 );
+				level notify ("stop_boss_sequence");
 				bossStartTrigger delete();
 				bossStartModel delete();
 			}
@@ -3175,6 +3214,38 @@ spawnBossStart()
 		wait 0.1;
 	}
 }
+
+electricity_towards_boss(origin)
+{
+	level endon ("stop_boss_sequence");
+	for(;;)
+	{
+		x = origin[0] + randomintrange(-1000,1000);
+		y = origin[1] + randomintrange(-1000,1000);
+		z = origin[2] + 500;
+		thread shoot_bolt_position((x,y,z),(1443,-520,55));
+		playfx( level._effect["avogadro_phasing"], (1443,-520,55) - (0,0,20) );
+		playfx( level._effect["avogadro_phasing"], self.origin - (0,0,20) );
+		delay = randomfloatrange(0.1,0.5);
+		wait delay;
+	}
+}
+
+shoot_bolt_position( loc, destination )
+{
+    source_pos = loc;
+    target_pos = destination;
+    bolt = spawn( "script_model", source_pos );
+    bolt setmodel( "tag_origin" );
+    wait 0.1;
+    bolt playsound( "zmb_avogadro_attack" );
+    fx = playfxontag( level._effect["avogadro_bolt"], bolt, "tag_origin" );
+    bolt moveto( target_pos, 0.2 );
+    bolt waittill( "movedone" );
+    bolt.owner = self;
+    bolt delete();
+}
+
 
 minion_dies()
 {
