@@ -10,9 +10,14 @@
 #include clientscripts\mp\_fx;
 #include clientscripts\mp\_filter;
 #include clientscripts\mp\zombies\_zm;
+#include clientscripts\mp\zombies\_zm_weapons;
+#include clientscripts\mp\zombies\_zm_perk_electric_cherry;
 
 main()
 {
+	clientscripts\mp\zombies\_zm_perk_electric_cherry::enable_electric_cherry_perk_for_level();
+	clientscripts\mp\_visionset_mgr::vsmgr_register_visionset_info( "zm_electric_cherry", 9000, 1, "zm_electric_cherry", "zm_electric_cherry" );
+	
 	replaceFunc( clientscripts\mp\zombies\_zm_perks::perks_register_clientfield, ::perks_register_clientfield );
 	replaceFunc( clientscripts\mp\zombies\_zm::init_client_flag_callback_funcs, ::init_client_flag_callback_funcs);
 

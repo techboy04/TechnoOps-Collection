@@ -23,7 +23,9 @@
 #include maps\mp\zm_tranzit;
 #include scripts\zm\main;
 #include maps\mp\zm_transit_sq;
-
+#include maps\mp\zombies\_zm_weap_emp_bomb;
+#include maps\mp\zombies\_zm_power;
+#include maps\mp\zombies\_zm_equipment;
 
 main()
 {
@@ -32,7 +34,7 @@ main()
 	replacefunc(maps\mp\zm_transit_sq::richtofen_sidequest_a, ::richtofen_sidequest_a_new);
 	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
 	replacefunc(maps\mp\zm_transit::include_equipment_for_level, ::include_equipment_for_level);
-//	replaceFunc(maps\mp\zm_transit_sq::richtofen_sidequest_c, ::custom_richtofen_sidequest_c);
+	replaceFunc(maps\mp\zm_transit_sq::richtofen_sidequest_c, ::custom_richtofen_sidequest_c);
 	
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)
 	{
@@ -68,6 +70,7 @@ init()
 		replaceFunc(maps\mp\zm_transit_sq::get_how_many_progressed_from, ::custom_get_how_many_progressed_from);
 		replaceFunc(maps\mp\zm_transit_sq::maxis_sidequest_b, ::custom_maxis_sidequest_b);
 	}
+	level thread enable_denizens_sidequest_b();
 	
 }
 
@@ -113,13 +116,33 @@ richtofen_sidequest_a_new()
     {
         level.sq_volume waittill( "trigger", who );
 
-        if ( isplayer( who ) && isalive( who ) && who getcurrentweapon() == "jetgun_zm" && who attackbuttonpressed())
+        if ( isplayer( who ) && isalive( who ) && who getcurrentweapon() == "jetgun_zm" )
         {
             who thread left_sq_area_watcher( level.sq_volume );
-            self.checking_jetgun_fire = 0;
-            break;
+            notifystring = who waittill_any_return( "disconnect", "weapon_change", "death", "player_downed", "jetgun_overheated", "left_sg_area" );
+
+            if ( notifystring == "jetgun_overheated" && isdefined( who ) && who istouching( level.sq_volume ) )
+            {
+                self.checking_jetgun_fire = 0;
+                break;
+            }
+			else if ( notifystring == "weapon_change" && isdefined( who ) && who istouching( level.sq_volume ) )
+            {
+                self.checking_jetgun_fire = 0;
+                break;
+            }
+            else
+            {
+                if ( !isdefined( ric_fail_out ) )
+                {
+                    ric_fail_out = 1;
+                    level thread richtofensay( "vox_zmba_sidequest_jet_low_0", undefined, 0, 10 );
+                }
+
+                self.checking_jetgun_fire = 0;
+            }
         }
-        else if ( isplayer( who ) && isalive( who ) && who getcurrentweapon() == "jetgun_zm" )
+        else if ( isplayer( who ) && isalive( who ) && who getcurrentweapon() == "jetgun_zm" && ( isdefined( who.jetgun_heatval ) && who.jetgun_heatval > 1 ) )
         {
             if ( !isdefined( ric_fail_heat ) )
             {
@@ -812,7 +835,6 @@ custom_richtofen_sidequest_c()
 {
 	level endon( "power_off" );
 	level endon( "richtofen_sq_complete" );
-	setDvar( "scr_screecher_ignore_player", 0 );
 	screech_zones = getstructarray( "screecher_escape", "targetname" );
 	level thread screecher_light_hint();
 	level thread screecher_light_on_sq();
@@ -917,12 +939,18 @@ player_can_burn()
 	{
 		if(!self hasperk ("specialty_divetonuke_zombies"))
 		{
-			return true;
+			return false;
 		}
-		return false;
+		return true;
 	}
 	else
 	{
-		return false;
+		return true;
 	}
+}
+
+enable_denizens_sidequest_b()
+{
+	level waittill ("sq_stage_3complete");
+	setDvar( "scr_screecher_ignore_player", 0 );
 }

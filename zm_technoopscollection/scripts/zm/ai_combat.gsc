@@ -145,12 +145,6 @@ bot_safely_use_mystery_box()
 			// Don't use this box, it has a teddy bear
 			return;
 		}
-		
-		// Watch for teddy bear notifications
-		self thread watch_for_box_teddy(closest_box);
-		
-		// Use the box
-		self UseButtonPressed();
 	}
 }
 

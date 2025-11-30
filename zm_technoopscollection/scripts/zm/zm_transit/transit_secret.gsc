@@ -3203,6 +3203,7 @@ spawnBossStart()
 				thread nuke_flash(3);
 				earthquake( 1, 2, (1443,-520,55), 1000 );
 				level notify ("stop_boss_sequence");
+				thread give_bots_special_weapons();
 				bossStartTrigger delete();
 				bossStartModel delete();
 			}

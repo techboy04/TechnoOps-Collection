@@ -233,7 +233,7 @@ CoD.InitArchiveDvars = function()
 		Engine.Exec(nil, "seta enable_weaponanimation 1")
 	end
 	if UIExpression.DvarString(nil, "perk_limit") == "" or UIExpression.DvarInt(nil, "perk_limit") <= 10 then
-		Engine.Exec(nil, "seta perk_limit 9")
+		Engine.Exec(nil, "seta perk_limit 10")
 	end
 	if UIExpression.DvarString(nil, "enable_fasttravel") == "" then
 		Engine.Exec(nil, "seta enable_fasttravel 1")
@@ -373,9 +373,6 @@ CoD.InitArchiveDvars = function()
 	if UIExpression.DvarString(nil, "gungame_ladder") == "" then
 		Engine.Exec(nil, "seta gungame_ladder 1")
 	end
-	if UIExpression.DvarString(nil, "experimental_trial") == "" then
-		Engine.Exec(nil, "seta experimental_trial 0")
-	end
 	if UIExpression.DvarString(nil, "experimental_aat") == "" then
 		Engine.Exec(nil, "seta experimental_aat 0")
 	end
@@ -432,7 +429,28 @@ CoD.InitArchiveDvars = function()
 	end
 	if UIExpression.DvarString(nil, "endgame_restart_map") == "" then
 		Engine.Exec(nil, "seta endgame_restart_map 0")
+	end
+	if UIExpression.DvarString(nil, "downed_sound") == "" then
+		Engine.Exec(nil, "seta downed_sound 0")
+	end
+	if UIExpression.DvarString(nil, "zombie_counter_look") == "" then
+		Engine.Exec(nil, "seta zombie_counter_look 2")
+	end
+	if UIExpression.DvarString(nil, "gungame_max_score") == "" then
+		Engine.Exec(nil, "seta gungame_max_score 8")
+	end
+	if UIExpression.DvarString(nil, "enable_teddtrials") == "" then
+		Engine.Exec(nil, "seta enable_teddtrials 1")
+	end
+	if UIExpression.DvarString(nil, "crit_sound") == "" then
+		Engine.Exec(nil, "seta crit_sound 0")
 	end	
+	if UIExpression.DvarString(nil, "debug_teddlocations") == "" then
+		Engine.Exec(nil, "seta debug_teddlocations 0")
+	end
+	if UIExpression.DvarString(nil, "goof_banklaugh") == "" then
+		Engine.Exec(nil, "seta goof_banklaugh 1")
+	end
 end
 
 LUI.createMenu.main = function()

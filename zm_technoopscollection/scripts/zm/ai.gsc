@@ -7,6 +7,8 @@
 #include maps\mp\zombies\_zm_blockers;
 #include maps\mp\zombies\_zm_powerups;
 #include scripts\zm\ai_combat;
+#include scripts\zm\main;
+#include scripts\zm\gobblegum;
 
 
 
@@ -20,7 +22,7 @@ bot_spawn()
 {
     self bot_spawn_init();
     self thread bot_main();
-    self thread bot_check_player_blocking();
+//    self thread bot_check_player_blocking();
 }
 
 array_combine(array1, array2)
@@ -58,6 +60,8 @@ init()
     level.last_bot_pap_time = 0;
     level.generator_in_use_by_bot = undefined;
     level.last_bot_generator_time = 0;
+	level.botsmode = 1;
+	level.botstoofarcheck = 0;
 
     // Setup bot tracking array
     if (!isdefined(level.bots))
@@ -66,6 +70,9 @@ init()
     bot_amount = getDvarInt("zm_bots_count");
 
     debug_text("^2Spawning " + bot_amount + " bots...");
+
+//	setDvar("com_maxclients", bot_amount + 1);
+//	setDvar("sv_maxclients", bot_amount + 1);
 
     for(i=0; i<bot_amount; i++)
     {
@@ -77,6 +84,8 @@ init()
     }
 
     // Initialize map specific logic
+	
+	level thread if_bot_is_too_far();
 
     debug_text("^2Bot initialization complete");
 }
@@ -716,6 +725,7 @@ spawn_bot()
     if(isDefined(bot))
     {
         bot.pers["isBot"] = 1;
+		bot.isbot = 1;
         bot thread onspawn();
     }
     
@@ -791,7 +801,8 @@ bot_main()
 		else
 		{
 			self bot_combat_think( damage, attacker, direction );
-			self bot_update_follow_host();
+			self bot_update_wander();
+			self bot_update_bots_too_far();
 			self bot_update_lookat();
 			self bot_teleport_think();
 			if(is_true(level.using_bot_weapon_logic))
@@ -808,7 +819,7 @@ bot_main()
 			self bot_pickup_powerup();
 			self bot_buy_door();  // Added door buying functionality
 			self bot_clear_debris();  // Added debris clearing functionality
-			self bot_buy_box();  // Added box buying functionality
+//			self bot_buy_box();  // Added box buying functionality
 		}	
 	}
 }
@@ -1651,16 +1662,45 @@ bot_perks()
 	}
 }
 
-bot_update_follow_host()
+bot_update_wander()
 {
-	//goal = self GetGoal("wander");
-	//if(distance(goal, self.origin) > 100)
-	//	return;
-	//if(distance(self.origin, get_players[0].origin) > 3000)
-	self AddGoal(get_players()[0].origin, 100, 1, "wander");
-	//self lookat(get_players()[0].origin);
-	//else
-	//	self AddGoal()	
+	goal = self GetGoal("wander");
+	if(distance(goal, self.origin) > 100)
+		return;
+	
+	if(level.botsmode == 2)
+	{
+		location = get_random_walkable_location(get_players()[0].origin, 200, self);
+		self AddGoal(location, 100, 1, "wander");
+	}
+	else if(level.botsmode == 1)
+	{
+		location = get_random_walkable_location(get_players()[0].origin, 1000, self);
+		self AddGoal(location, 100, 1, "wander");	
+	}
+	else if(level.botsmode == 3)
+	{
+		self AddGoal(self.origin, 100, 1, "wander");	
+	}
+}
+
+bot_update_bots_too_far()
+{
+	if(if_bot_is_too_far() && level.botstoofarcheck == 0)
+	{
+		level.botstoofarcheck = 1;
+		spawn_points = maps\mp\gametypes_zm\_zm_gametype::get_player_spawns_for_gametype();
+		points = [];
+		for ( j = 0; j < spawn_points.size; j++ )
+		{
+			if ( spawn_points[j].locked == 0 )
+			{
+				points[points.size] = spawn_points[j].origin;
+			}
+		}
+		self setOrigin (points[randomintrange(0,points.size - 1)]);
+		level.botstoofarcheck = 0;
+	}
 }
 
 bot_update_lookat()
@@ -2034,4 +2074,83 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     
     // Default case - 50/50 chance
     return (randomfloat(1) < 0.5);
+}
+
+//If bot is 15000 meters away.
+
+if_bot_is_too_far()
+{
+	foreach(player in level.players)
+	{	
+		if(!isDefined(player.isBot))
+		{
+			if(distance(player.origin, get_players()[0].origin) > 1800)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bot_use_gobblegum()
+{
+	if(isDefined(self.gobblegum) && !self player_is_in_laststand())
+	{
+		if(self actionslotthreebuttonpressed() || level.gobblegums[self.gobblegum].type == "timed" || level.gobblegums[self.gobblegum].type == "auto_activate")
+		{
+			if( self [[level.gobblegums[self.gobblegum].check_use]]() )
+			{
+				self playsound ("gobblegum_use");
+				wait 1;
+				self.gobblegum_active = 1;
+				if(level.gobblegums[self.gobblegum].type == "activate" || level.gobblegums[self.gobblegum].type == "auto_activate")
+				{
+					self [[ level.gobblegums[self.gobblegum].use_func ]]();
+				}
+				else if(level.gobblegums[self.gobblegum].type == "timed")
+				{
+					self timed_gobblegum();
+				}
+				self.gobblegum_active = 0;
+				self notify ("gobblegum_used");
+				self.gobblegum = undefined;
+				self.gobbleHUDText setText ("");
+				self.gobbleHUDImage setShader ("", 32, 32);
+			}
+			else
+			{
+				self cancel_gobble_gum_action();
+			}
+		}
+	}
+}
+
+bots_switch_mode()
+{
+	level.botsmode += 1;
+	
+	if(level.botsmode == 1) //Wander
+	{
+		self iprintln("Bots will now WANDER");
+	}
+	else if(level.botsmode == 2) //Follow Host
+	{
+		self iprintln("Bots will now FOLLOW HOST");
+	}
+	else if(level.botsmode == 3) //Defense
+	{
+		self iprintln("Bots will now DEFEND");
+		level.botsmode = 0;
+	}
+}
+
+//BOT DEBUG SHIT
+
+distances_from_host()
+{
+	for(;;)
+	{
+		wait 1;
+	}
 }

@@ -60,6 +60,8 @@ new_perks_from_the_sky()
 		bring_random_perk( machines, machine_triggers );
 		level waittill ("clock_chime");
 		bring_random_perk( machines, machine_triggers );
+		level waittill ("clock_chime");
+		bring_random_perk( machines, machine_triggers );
 	}
 	else if(getDvarInt("nuketown_perks_mode") == 3)
 	{
@@ -72,6 +74,8 @@ new_perks_from_the_sky()
 		level waittill( "between_round_over" );
 		bring_random_perk( machines, machine_triggers );
 		level waittill( "between_round_over" );
+		bring_random_perk( machines, machine_triggers );
+		level waittill ("clock_chime");
 		bring_random_perk( machines, machine_triggers );
 	}
 	else
@@ -99,6 +103,8 @@ new_perks_from_the_sky()
 		wait( randomintrange( 60, 120 ) );
 		bring_random_perk( machines, machine_triggers );
 		wait_for_round_range( 20, 25 );
+		wait( randomintrange( 60, 120 ) );
+		bring_random_perk( machines, machine_triggers );
 		wait( randomintrange( 60, 120 ) );
 		bring_random_perk( machines, machine_triggers );
 	}

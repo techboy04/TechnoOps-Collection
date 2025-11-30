@@ -28,6 +28,7 @@ main()
 //	replacefunc(maps\mp\zombies\_zm_powerups::insta_kill_powerup, ::insta_kill_powerup);
 	replacefunc(maps\mp\zombies\_zm_powerups::point_doubler_on_hud, ::point_doubler_on_hud);
 	replacefunc(maps\mp\zombies\_zm_powerups::insta_kill_on_hud, ::insta_kill_on_hud);
+	replacefunc(maps\mp\zombies\_zm_laststand::playerlaststand, ::playerlaststand);
 	
 	precachemodel("p6_zm_tm_crate_01_short");
 	precachemodel("zombie_teddybear");
@@ -97,9 +98,12 @@ init()
 	register_gobblegum( "power_vacuum", "Power Vacuum", "gum_power_vacuum", ::power_vacuum_use, "timed", "Powerups have no limit per round.", "cyan", 5, ::default_check_use, false);
 	register_gobblegum( "cache_back", "Cache Back", "gum_cache_back", ::spawn_max_ammo, "activate", "Spawn a Max Ammo powerup.", "pink", 0, ::default_check_use, false);
 	register_gobblegum( "kill_joy", "Kill Joy", "gum_kill_joy", ::spawn_insta_kill, "activate", "Spawn an Insta Kill powerup.", "pink", 0, ::default_check_use, false);
+	register_gobblegum( "extra_credit", "Extra Credit", "gum_extra_credit", ::spawn_extra_credit, "activate", "Gain 1500 points.", "pink", 0, ::default_check_use, false);
+	register_gobblegum( "flavor_hexed", "Flavor Hexed", "gum_flavor_hexed", ::flavor_hexed_use, "activate", "Get a random Ultra gobblegum.", "yellow", 0, ::default_check_use, false);
 	register_gobblegum( "on_the_house", "On the House", "gum_on_the_house", ::on_the_house_use, "activate", "Obtain a random perk.", "yellow", 0, ::default_check_use, false);
 	register_gobblegum( "soda_fountain", "Soda Fountain", "gum_soda_fountain", ::soda_fountain_use, "auto_activate", "Obtain a random perk when buying a perk.", "yellow", 0, ::default_check_use, false);
 	register_gobblegum( "idle_eyes", "Idle Eyes", "gum_idle_eyes", ::idle_eyes_use, "activate", "All players will be hidden from zombies for 30 seconds.", "cyan", 0, ::is_player_ignored, false);
+	register_gobblegum( "aftertaste", "Aftertaste", "gum_aftertaste", ::aftertaste_use, "auto_activate", "Perks are retained after being revived.", "cyan", 6, ::default_check_use, false);
 	register_gobblegum( "stock_option", "Stock Option", "gum_stock_option", ::stock_option_use, "timed", "Shoot from the reserve instead of the Magazine.", "green", 3, ::default_check_use, false);
 	register_gobblegum( "free_fire", "Free Fire", "gum_free_fire", ::free_fire_use, "timed", "Have unlimited ammo.", "pink", 2, ::default_check_use, false);
 	register_gobblegum( "profit_sharing", "Profit Sharing", "gum_profit_sharing", ::profit_sharing_use, "timed", "Players near you will gain your points.", "cyan", 5, ::default_check_use, false);
@@ -123,6 +127,8 @@ init()
 	register_gobblegum( "tone_death", "Tone Death", "gum_tone_death", ::tone_death_use, "timed", "A silly sound plays whenever you kill a zombie.", "pink", 5, ::default_check_use, false);
 
 	register_gobblegum( "ephemeral_enhancement", "Ephemeral Enhancement", "gum_ephemeral_enhancement", ::ephemeral_enhancement_use, "activate", "Upgrade your weapon temporarily.", "pink", 0, ::ephemeral_enhancement_check, false);
+
+	register_gobblegum( "coagulant", "Coagulant", "gum_coagulant", ::coagulant_use, "timed", "The time while downed doubles.", "green", 20, ::default_check_use, false);
 
 // Uncomment or use in another script to have a custom list of gobblegums. This WILL replace the original list of gobbles used in the machine.
 //	level.customgumslist = array("ephemeral_enhancement");
@@ -546,8 +552,10 @@ timed_gobblegum()
 	self endon ("gobblegum_switched");
 	self thread timed_function();
 	self.gobbleHUDText setText ("");
+	self.gobblegum_active = 1;
 	self.gobbleHUDText setTimer (level.gobblegums[self.gobblegum].duration * 60);
 	wait level.gobblegums[self.gobblegum].duration * 60;
+	self.gobblegum_active = 0;
 	self.gobbleHUDText setText ("");
 	self playsound ("gobblegum_expire");
 	self notify ("gobblegum_finished");
@@ -903,6 +911,7 @@ cancel_gobble_gum_action()
 
 awaiting_gobble_use()
 {
+	self endon ("disconnect");
 	for(;;)
 	{
 		while(self.gobblegum_active == 1)
@@ -988,6 +997,11 @@ spawn_zombie_blood()
 	level maps\mp\zombies\_zm_powerups::specific_powerup_drop("zombie_blood", self get_front_location());
 }
 
+spawn_extra_credit()
+{
+	self.score += 1500;
+}
+
 spawn_random_powerup()
 {
 	random_powerups = array(::spawn_insta_kill, ::spawn_max_ammo, ::spawn_double_points, ::spawn_nuke, ::on_the_house_use);
@@ -1038,6 +1052,21 @@ stock_option_use()
 	}
 }
 
+aftertaste_use()
+{
+	self endon ("gobble_pickedup");
+	self endon ("gobblegum_switched");
+	self endon ("gobblegum_finished");
+
+	self waittill_any("player_revived");
+	self.dovghud = 0;
+	foreach(i in self.saved_perks)
+	{
+		self give_perk( i, 0);
+	}
+	self.dovghud = 1;
+}
+
 free_fire_use()
 {
 	self setweaponammoclip( self getcurrentweapon(), self getammocount( self getcurrentweapon() ) );
@@ -1058,6 +1087,7 @@ perkaholic_use()
 		perks[ perks.size ] = machines[ i ].script_noteworthy;
 		i++;
 	}
+	self.dovghud = 0;
 	foreach ( perk in perks )
 	{
 		if ( isDefined( self.perk_purchased ) && self.perk_purchased == perk )
@@ -1085,6 +1115,27 @@ perkaholic_use()
 		wait 0.25;
 		self maps\mp\zombies\_zm_perks::give_perk( "specialty_grenadepulldeath", 0 );
 	}
+	self.dovghud = 1;
+}
+
+flavor_hexed_use()
+{
+	filteredgobble = [];
+	foreach(gobble in level.gobblegums)
+	{
+		if(gobble.color == "red")
+		{
+			filteredgobble[filteredgobble.size] = gobble;
+		}
+	}
+	chosen = random(filteredgobble);
+	self thread flavor_hexed_delay(chosen);
+}
+
+flavor_hexed_delay(chosen)
+{
+	wait 0.2;
+	self givegobble(chosen.id);
 }
 
 crate_power_use()
@@ -1220,6 +1271,11 @@ respin_cycle_use()
 temporal_gift_use()
 {
 
+}
+
+coagulant_use()
+{
+	self.gobblegum_active = 1;
 }
 
 mind_blown_use()
@@ -1380,6 +1436,7 @@ enhancement_timeout(savedweapon)
 anywhere_but_here_use()
 {
 
+	points = [];
 	spawn_points = maps\mp\gametypes_zm\_zm_gametype::get_player_spawns_for_gametype();
 
     for ( j = 0; j < spawn_points.size; j++ )
@@ -1630,7 +1687,7 @@ treasure_chest_weapon_spawn( chest, player, respin )
 
     if ( isdefined( player.pers_upgrades_awarded["box_weapon"] ) && player.pers_upgrades_awarded["box_weapon"] )
         rand = maps\mp\zombies\_zm_pers_upgrades_functions::pers_treasure_chest_choosespecialweapon( player );
-	else if(isDefined(level.gobblegums[player.gobblegum]) && level.gobblegums[player.gobblegum].id == "wonderbar" && player.gobblegum_active == 1)
+	else if(player is_gobble_active("wonderbar"))
 		rand = get_wonderbar_weapons()[randomintrange(0,get_wonderbar_weapons().size)];
     else
         rand = treasure_chest_chooseweightedrandomweapon( player );
@@ -1838,7 +1895,7 @@ double_points_powerup( drop_item, player )
             players[player_index] setclientfield( "score_cf_double_points_active", 1 );
     }
 
-	if(isDefined(level.gobblegums) && level.gobblegums[player.gobblegum].id == "temporal_gift" && isDefined(player.gobblegum_active) && player.gobblegum_active == 1)
+	if(player is_gobble_active("temporal_gift"))
 	{
 		wait 60;
 	}
@@ -1861,7 +1918,7 @@ point_doubler_on_hud( drop_item, player_team, player )
 {
     self endon( "disconnect" );
 
-    if(isDefined(level.gobblegums) && level.gobblegums[player.gobblegum].id == "temporal_gift" && isDefined(player.gobblegum_active) && player.gobblegum_active == 1)
+    if(player is_gobble_active("temporal_gift"))
 	{
 		level.zombie_vars[player_team]["zombie_powerup_point_doubler_time"] = 60;
 	}
@@ -1896,7 +1953,7 @@ insta_kill_powerup( drop_item, player )
     team = player.team;
     level thread insta_kill_on_hud( drop_item, team, player );
     level.zombie_vars[team]["zombie_insta_kill"] = 1;
-	if(isDefined(level.gobblegums) && level.gobblegums[player.gobblegum].id == "temporal_gift" && isDefined(player.gobblegum_active) && player.gobblegum_active == 1)
+	if(player is_gobble_active("temporal_gift"))
 	{
 		wait 60;
 	}
@@ -1916,7 +1973,7 @@ insta_kill_powerup( drop_item, player )
 
 insta_kill_on_hud( drop_item, player_team, player )
 {
-    if(isDefined(level.gobblegums) && level.gobblegums[player.gobblegum].id == "temporal_gift" && isDefined(player.gobblegum_active) && player.gobblegum_active == 1)
+    if(player is_gobble_active("temporal_gift"))
 	{
 		level.zombie_vars[player_team]["zombie_powerup_insta_kill_time"] = 60;
 	}
@@ -1958,4 +2015,87 @@ treasure_chest_give_weapon( weapon_string )
     self.last_box_weapon = gettime();
     self maps\mp\zombies\_zm_weapons::weapon_give( weapon_string, 0, 1 );
 	self notify ("box_grabbed_gun", weapon_string);
+}
+
+playerlaststand( einflictor, attacker, idamage, smeansofdeath, sweapon, vdir, shitloc, psoffsettime, deathanimduration )
+{
+    self notify( "entering_last_stand" );
+
+    if ( isdefined( level._game_module_player_laststand_callback ) )
+        self [[ level._game_module_player_laststand_callback ]]( einflictor, attacker, idamage, smeansofdeath, sweapon, vdir, shitloc, psoffsettime, deathanimduration );
+
+    if ( self player_is_in_laststand() )
+        return;
+
+    if ( isdefined( self.in_zombify_call ) && self.in_zombify_call )
+        return;
+
+    self thread player_last_stand_stats( einflictor, attacker, idamage, smeansofdeath, sweapon, vdir, shitloc, psoffsettime, deathanimduration );
+
+    if ( isdefined( level.playerlaststand_func ) )
+        [[ level.playerlaststand_func ]]( einflictor, attacker, idamage, smeansofdeath, sweapon, vdir, shitloc, psoffsettime, deathanimduration );
+
+    self.health = 1;
+    self.laststand = 1;
+    self.ignoreme = 1;
+    self thread maps\mp\gametypes_zm\_gameobjects::onplayerlaststand();
+    self thread maps\mp\zombies\_zm_buildables::onplayerlaststand();
+
+    if ( !( isdefined( self.no_revive_trigger ) && self.no_revive_trigger ) )
+        self revive_trigger_spawn();
+    else
+        self undolaststand();
+
+    if ( isdefined( self.is_zombie ) && self.is_zombie )
+    {
+        self takeallweapons();
+
+        if ( isdefined( attacker ) && isplayer( attacker ) && attacker != self )
+            attacker notify( "killed_a_zombie_player", einflictor, self, idamage, smeansofdeath, sweapon, vdir, shitloc, psoffsettime, deathanimduration );
+    }
+    else
+    {
+        self laststand_disable_player_weapons();
+        self laststand_give_pistol();
+    }
+
+    if ( isdefined( level.playersuicideallowed ) && level.playersuicideallowed && get_players().size > 1 )
+    {
+        if ( !isdefined( level.canplayersuicide ) || self [[ level.canplayersuicide ]]() )
+            self thread suicide_trigger_spawn();
+    }
+
+    if ( isdefined( self.disabled_perks ) )
+        self.disabled_perks = [];
+
+    if ( level.laststandgetupallowed )
+        self thread laststand_getup();
+    else
+    {
+        bleedout_time = getdvarfloat( #"player_lastStandBleedoutTime" );
+		if(self is_gobble_active("coagulant"))
+		{
+			bleedout_time = bleedout_time * 2;
+		}
+        self thread laststand_bleedout( bleedout_time );
+    }
+
+    if ( "zcleansed" != level.gametype )
+        maps\mp\_demo::bookmark( "zm_player_downed", gettime(), self );
+
+    self notify( "player_downed" );
+    self thread refire_player_downed();
+    self thread cleanup_laststand_on_disconnect();
+}
+
+is_gobble_active(gobble_id)
+{
+	if(self.gobblegum.id == gobble_id && (isDefined(self.gobblegum_active) && self.gobblegum_active == 1))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }

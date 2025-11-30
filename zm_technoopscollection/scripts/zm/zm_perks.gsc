@@ -6,6 +6,8 @@
 #include maps\mp\_visionset_mgr;
 #include maps\mp\zombies\_zm_power;
 #include maps\mp\zombies\_zm;
+#include maps\mp\zombies\_zm_perk_electric_cherry;
+#include scripts\zm\main;
 
 main()
 {
@@ -14,12 +16,34 @@ main()
 //    replaceFunc( maps\mp\zombies\_zm_perks::give_perk, ::give_perk );
     replaceFunc( maps\mp\zombies\_zm_perks::default_vending_precaching, ::default_vending_precaching );
 
+	level.zombiemode_using_electric_cherry_perk = 1;
+    maps\mp\zombies\_zm_perk_electric_cherry::enable_electric_cherry_perk_for_level();
+	maps\mp\_visionset_mgr::vsmgr_register_info( "visionset", "zm_electric_cherry", 9000, 121, 1, 1 );
+
+	level thread turn_perks_on();
+
     perks();
+	
+	location = getDvar( "ui_zm_mapstartlocation" );
+	if(getDvar("mapname") == "zm_tomb" || getDvar("mapname") == "zm_prison")
+	{
+		return;
+	}
+	replaceFunc( common_scripts\utility::struct_class_init, ::struct_class_init_o );
+	level thread turn_addedperks_on();
 }
 
 init()
 {
     level.player_too_many_weapons_monitor_func = ::player_too_many_weapons_monitor;
+}
+
+turn_perks_on()
+{
+	flag_wait( "start_zombie_round_logic" );
+	level waittill ("power_on");
+	wait 1;
+	level notify( "electric_cherry_on" );
 }
 
 player_too_many_weapons_monitor()
@@ -463,5 +487,189 @@ clientnotifyloop(notify_str, endon_str)
 		level waittill("connected", player);
 
 		wait 0.05;
+	}
+}
+
+turn_addedperks_on()
+{
+	flag_wait( "start_zombie_round_logic" );
+	level waittill ("power_on");
+	wait 1;
+	level notify( "divetonuke_on" );
+}
+
+struct_class_init_o()
+{
+	level.struct_class_names = [];
+	level.struct_class_names[ "target" ] = [];
+	level.struct_class_names[ "targetname" ] = [];
+	level.struct_class_names[ "script_noteworthy" ] = [];
+	level.struct_class_names[ "script_linkname" ] = [];
+	level.struct_class_names[ "script_unitrigger_type" ] = [];
+	foreach ( s_struct in level.struct )
+	{
+		if ( isDefined( s_struct.targetname ) )
+		{
+			if ( !isDefined( level.struct_class_names[ "targetname" ][ s_struct.targetname ] ) )
+			{
+				level.struct_class_names[ "targetname" ][ s_struct.targetname ] = [];
+			}
+			size = level.struct_class_names[ "targetname" ][ s_struct.targetname ].size;
+			level.struct_class_names[ "targetname" ][ s_struct.targetname ][ size ] = s_struct;
+		}
+		if ( isDefined( s_struct.target ) )
+		{
+			if ( !isDefined( level.struct_class_names[ "target" ][ s_struct.target ] ) )
+			{
+				level.struct_class_names[ "target" ][ s_struct.target ] = [];
+			}
+			size = level.struct_class_names[ "target" ][ s_struct.target ].size;
+			level.struct_class_names[ "target" ][ s_struct.target ][ size ] = s_struct;
+		}
+		if ( isDefined( s_struct.script_noteworthy ) )
+		{
+			if ( !isDefined( level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ] ) )
+			{
+				level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ] = [];
+			}
+			size = level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ].size;
+			level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ][ size ] = s_struct;
+		}
+		if ( isDefined( s_struct.script_linkname ) )
+		{
+			level.struct_class_names[ "script_linkname" ][ s_struct.script_linkname ][ 0 ] = s_struct;
+		}
+		if ( isDefined( s_struct.script_unitrigger_type ) )
+		{
+			if ( !isDefined( level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ] ) )
+			{
+				level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ] = [];
+			}
+			size = level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ].size;
+			level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ][ size ] = s_struct;
+		}
+	}
+	location = getDvar( "ui_zm_mapstartlocation" );
+	if ( location == "processing" ) // Buried start location
+	{
+		origin = (1510.27, 1341.8, -14.6283);
+		angle = -16.372;
+	}
+	else if (location == "transit")
+	{
+		if(getDvar( "g_gametype" ) == "zclassic" )
+		{
+			origin = (-4868.22, -5677.28, -68.3136);
+			angle = 260.552;
+		}
+		else
+		{
+			origin = (-7422.59, 5055, -55.875);
+			angle = 90.204659;
+		}
+	}
+	else if (location == "town")
+	{
+		origin = (1815.64, 533.793, -55.875);
+		angle = 90.300858;
+	}
+	else if (location == "farm")
+	{
+		origin = (8303.52, -6597.43, 105.295);
+		angle = 120.6939;
+	}
+	else if (location == "nuked")
+	{
+		origin = (842.437, 1017.37, 8048.26);
+		angle = -72.2576;
+	}
+	register_perk_struct( "specialty_grenadepulldeath", "p6_zm_vending_electric_cherry_on", ( 0, angle, 0 ), origin );
+	level thread perk_trigger(origin[0],origin[1],origin[2]);
+}
+
+//Town
+//(1815.64, 533.793, -55.875) - Angle: -0.300858
+
+//Farm
+//(8303.52, -6597.43, 105.295) - Angle: 30.6939
+
+//Bus Depot
+//(-7422.59, 5055, -55.875) - Angle: 0.204659
+
+//Tranzit
+//(-4868.22, -5677.28, -68.3136) - Angle: 170.552
+
+//Buried
+//(1510.27, 1341.8, -14.6283) - Angle: -106.372
+
+//Nuketown
+//(842.437, 1017.37, 8048.26) - Angle: -72.2576
+
+//Die Rise
+//
+
+
+register_perk_struct( perk_name, perk_model, perk_angles, perk_coordinates )
+{
+	perk_struct = spawnStruct();
+	perk_struct.script_noteworthy = perk_name;
+	perk_struct.model = perk_model;
+	perk_struct.angles = perk_angles;
+	perk_struct.origin = perk_coordinates;
+	perk_struct.targetname = "zm_perk_machine";
+	if ( perk_name == "specialty_weapupgrade" )
+	{
+		flag_struct = spawnStruct();
+		flag_struct.targetname = "weapupgrade_flag_targ";
+		flag_struct.model = "zombie_sign_please_wait";
+		flag_struct.angles = perk_angles + ( 0, 180, 180 );
+		flag_struct.origin = perk_coordinates + ( anglesToForward( perk_angles ) * 29 ) + ( anglesToRight( perk_angles ) * -13.5 ) + ( anglesToUp( perk_angles ) * 49.5 );
+		perk_struct.target = flag_struct.targetname;
+		add_struct( flag_struct );
+	}
+	add_struct( perk_struct );
+}
+
+add_struct( s_struct )
+{
+	if ( isDefined( s_struct.targetname ) )
+	{
+		if ( !isDefined( level.struct_class_names[ "targetname" ][ s_struct.targetname ] ) )
+		{
+			level.struct_class_names[ "targetname" ][ s_struct.targetname ] = [];
+		}
+		size = level.struct_class_names[ "targetname" ][ s_struct.targetname ].size;
+		level.struct_class_names[ "targetname" ][ s_struct.targetname ][ size ] = s_struct;
+	}
+	if ( isDefined( s_struct.script_noteworthy ) )
+	{
+		if ( !isDefined( level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ] ) )
+		{
+			level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ] = [];
+		}
+		size = level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ].size;
+		level.struct_class_names[ "script_noteworthy" ][ s_struct.script_noteworthy ][ size ] = s_struct;
+	}
+	if ( isDefined( s_struct.target ) )
+	{
+		if ( !isDefined( level.struct_class_names[ "target" ][ s_struct.target ] ) )
+		{
+			level.struct_class_names[ "target" ][ s_struct.target ] = [];
+		}
+		size = level.struct_class_names[ "target" ][ s_struct.target ].size;
+		level.struct_class_names[ "target" ][ s_struct.target ][ size ] = s_struct;
+	}
+	if ( isDefined( s_struct.script_linkname ) )
+	{
+		level.struct_class_names[ "script_linkname" ][ s_struct.script_linkname ][ 0 ] = s_struct;
+	}
+	if ( isDefined( s_struct.script_unitrigger_type ) )
+	{
+		if ( !isDefined( level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ] ) )
+		{
+			level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ] = [];
+		}
+		size = level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ].size;
+		level.struct_class_names[ "script_unitrigger_type" ][ s_struct.script_unitrigger_type ][ size ] = s_struct;
 	}
 }
