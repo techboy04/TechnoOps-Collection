@@ -66,10 +66,6 @@ init_nuked_perks()
     level.nuked_perks[8].model = "p6_zm_al_vending_nuke_on";
     level.nuked_perks[8].script_noteworthy = "specialty_flakjacket";
     level.nuked_perks[8].turn_on_notify = "divetonuke_on";
-    level.nuked_perks[9] = spawnstruct();
-    level.nuked_perks[9].model = "p6_zm_vending_electric_cherry_on";
-    level.nuked_perks[9].script_noteworthy = "specialty_grenadepulldeath";
-    level.nuked_perks[9].turn_on_notify = "divetonuke_on";
     players = getnumexpectedplayers();
 
     if ( players == 1 )
@@ -180,7 +176,6 @@ bring_perk( machine, trigger )
     is_mulekick = 0;
     is_deadshot = 0;
     is_phd = 0;
-	is_cherry = 0;
     flag_waitopen( "perk_vehicle_bringing_in_perk" );
     playsoundatposition( "zmb_perks_incoming_quad_front", ( 0, 0, 0 ) );
     playsoundatposition( "zmb_perks_incoming_alarm", ( -2198, 486, 327 ) );
@@ -249,12 +244,6 @@ bring_perk( machine, trigger )
         offset = vectorscale( forward_dir * -1, 20 );
         is_phd = 1;
     }
-    else if ( issubstr( machine.targetname, "electriccherry" ) )
-    {
-        forward_dir = anglestoforward( machine.original_angles + vectorscale( ( 0, -1, 0 ), 90.0 ) );
-        offset = vectorscale( forward_dir * -1, 20 );
-        is_cherry = 1;
-    }
 
     if ( !is_revive )
     {
@@ -317,10 +306,6 @@ bring_perk( machine, trigger )
     {
         machine thread perk_fx( "divetonuke_light" );
     }
-    else if ( is_cherry )
-    {
-        machine thread perk_fx( "divetonuke_light" );
-    }
 }
 
 perks_from_the_sky()
@@ -372,10 +357,6 @@ perks_from_the_sky()
     machine_triggers[8] = getent( "vending_divetonuke", "target" );
     move_perk( machines[8], top_height, 5.0, 0.001 );
     machine_triggers[8] trigger_off();
-    machines[9] = getent( "vending_electriccherry", "targetname" );
-    machine_triggers[9] = getent( "vending_electriccherry", "target" );
-    move_perk( machines[9], top_height, 5.0, 0.001 );
-    machine_triggers[9] trigger_off();
     flag_wait( "initial_blackscreen_passed" );
     wait( randomfloatrange( 5.0, 15.0 ) );
     players = get_players();

@@ -317,7 +317,7 @@ CoD.InitArchiveDvars = function()
 		Engine.Exec(nil, "seta enable_ladderintown 1")
 	end
 	if UIExpression.DvarString(nil, "enable_match_timer") == "" then
-		Engine.Exec(nil, "seta enable_match_timer 1")
+		Engine.Exec(nil, "seta enable_match_timer 0")
 	end
 	if UIExpression.DvarString(nil, "enable_bleedout_bar") == "" then
 		Engine.Exec(nil, "seta enable_bleedout_bar 1")
@@ -450,6 +450,9 @@ CoD.InitArchiveDvars = function()
 	end
 	if UIExpression.DvarString(nil, "goof_banklaugh") == "" then
 		Engine.Exec(nil, "seta goof_banklaugh 1")
+	end
+	if UIExpression.DvarString(nil, "enable_toasts") == "" then
+		Engine.Exec(nil, "seta enable_toasts 1")
 	end
 end
 

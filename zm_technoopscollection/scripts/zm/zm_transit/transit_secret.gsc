@@ -37,6 +37,11 @@ main()
 	precachemodel("p6_zm_tm_generator_pump");
 	precachemodel("p6_zm_tm_barbedwire_tube");
 	precachemodel("p6_zm_tm_barbedwire_blockade");
+	
+	precacheshader("zom_hud_shovel_gold");
+	precacheshader("zom_hud_icon_buildable_item_jg_wires");
+	precacheshader("zom_hud_icon_buildable_tower_crystal");
+	precacheshader("zom_hud_icon_buildable_tower_satellite");
 
 	replacefunc(maps\mp\zombies\_zm::round_spawn_failsafe, ::round_spawn_failsafe_new);
     replaceFunc(maps\mp\zm_transit_distance_tracking::delete_zombie_noone_looking, ::delete_zombie_noone_looking);
@@ -640,18 +645,39 @@ spawnPart(location, partnum)
 
 			if(partnum == 0)
 			{
+				if(getDvarInt("enable_toasts") == 1)
+				{
+					send_toast(i.name + " picked up a Satellite", "zom_hud_icon_buildable_tower_satellite", "Quest Item");
+				}
+				else
+				{
+					notify_player_action(i.name + " picked up a satellite");
+				}
 				do_vox_subtitles("Entity", "The satellite will be perfect for projecting the connection.", 3, "vox_part_1");
-				notify_player_action(i.name + " picked up a satellite");
 			}
 			else if(partnum == 1)
 			{
+				if(getDvarInt("enable_toasts") == 1)
+				{
+					send_toast(i.name + " picked up a Crystal", "zom_hud_icon_buildable_tower_crystal", "Quest Item");
+				}
+				else
+				{
+					notify_player_action(i.name + " picked up a crystal");
+				}
 				do_vox_subtitles("Entity", "That crystal is useful for going past the Aethers barrier. Letting us reach to him!", 5, "vox_part_2");
-				notify_player_action(i.name + " picked up a crystal");
 			}
 			else if(partnum == 2)
 			{
+				if(getDvarInt("enable_toasts") == 1)
+				{
+					send_toast(i.name + " picked up Wires", "zm_hud_icon_jetgun_wires", "Quest Item");
+				}
+				else
+				{
+					notify_player_action(i.name + " picked up wires");
+				}
 				do_vox_subtitles("Entity", "Those electronic parts could help add that extra energy to our connection.", 4, "vox_part_3");
-				notify_player_action(i.name + " picked up wires");
 			}
 			
 			if(level.parts[0] == true && level.parts[1] == true && level.parts[2] == true)
@@ -1214,13 +1240,16 @@ spawnPhone()
 	phoneTrigger setHintString("Press ^3&&1 ^7to answer");
 	phoneTrigger setcursorhint( "HINT_NOICON" );
 	
-	level thread playphone(locations);
+	if(!is_quest_blocked())
+	{
+		level thread playphone(locations);
+	}
 	
 	for(;;)
 	{
 		phoneTrigger waittill( "trigger", i );
 		
-		if(i usebuttonpressed())
+		if(i usebuttonpressed() && !is_quest_blocked(i))
 		{
 			phoneTrigger setHintString("");
 			level notify ("phone_answered");
@@ -1932,6 +1961,10 @@ spawnMachine(location)
 			level.hasdigger = true;
 			partTrigger delete();
 			partModel delete();
+			if(getDvarInt("enable_toasts") == 1)
+			{
+				send_toast(i.name + " picked up the Lava Digging Machine.", "zm_hud_icon_jetgun_engine", "Quest Item");
+			}
 			do_vox_subtitles("Entity", "This machine can dig through lava pools, a workbench part might be in one.", 4, "vox_pickup_machine");
 			level thread spawnLavaDiggerTrigger(level.chosenLavaPool);
 		}
@@ -2036,7 +2069,14 @@ placeScrambler(location, angle)
 		if( i usebuttonpressed() )
 		{
 			level.pickedupscrambler = 1;
-			notify_player_action(i.name + " picked up a radio scrambler");
+			if(getDvarInt("enable_toasts") == 1)
+			{
+				send_toast(i.name + " picked up a Radio Scrambler", "objective_marker", "Mysterious Item");
+			}
+			else
+			{
+				notify_player_action(i.name + " picked up a radio scrambler");
+			}
 			radioTrigger delete();
 			radioModel delete();
 		}
@@ -2296,7 +2336,7 @@ boss_intro_quotes()
 {
 	wait 2;
 	do_vox_subtitles("Entity", "I cant do anything! You must eliminate the distrubance!", 4, "vox_boss_start_1");
-	do_vox_subtitles("Avogadro", "Not so fast! Those humans trapped me in that lab!", 5, "vox_boss_start_2");
+	do_vox_subtitles("Avogadro", "Not so fast! Those scientists trapped me in that lab!", 5, "vox_boss_start_2");
 	do_vox_subtitles("Avogadro", "Letting me out was a huge mistake!", 2, "vox_boss_start_3");
 	do_vox_subtitles("Avogadro", "Your lives end here! Once and for all!", 4, "vox_boss_start_4");
 }
@@ -3209,7 +3249,14 @@ spawnBossStart()
 			}
 			else
 			{
-				notify_player_action(i.name + " wants to initiate the final encounter!");
+				if(getDvarInt("enable_toasts") == 1)
+				{
+					send_toast(i.name + " wants to initiate the Final Encounter", "objective_marker");
+				}
+				else
+				{
+					notify_player_action(i.name + " wants to initiate the final encounter!");
+				}
 			}
 		}
 		wait 0.1;

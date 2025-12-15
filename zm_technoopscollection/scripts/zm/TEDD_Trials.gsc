@@ -61,10 +61,10 @@ spawn_random_TEDD()
 //	level.players[0] iprintln("Attempted to spawn TEDD");
 	spot = random(level.teddtrialbots);
 //	level.players[0] iprintln("Random Selection Passed: " + level.teddtrialbots.size);
-	level thread spawn_TEDD(spot.location, spot.angle, spot.zones, spot.reward_location);
+	level thread spawn_TEDD(spot.location, spot.angle, spot.zones, spot.reward_location, spot.area_name);
 }
 
-spawn_TEDD(location, angle, zones, reward_location)
+spawn_TEDD(location, angle, zones, reward_location, area_name)
 {
 	level notify ("tedd_remove_rewards");
 	foreach(player in level.players)
@@ -77,7 +77,6 @@ spawn_TEDD(location, angle, zones, reward_location)
 	level.teddtrial = spawn( "script_model", start );
 	level.teddtrial setmodel( "p6_anim_zm_bus_driver" );
 	level.teddtrial useanimtree( #animtree );
-	level.teddtrial animmode( "normal" );
 	level.teddtrial setanim( %ai_zombie_bus_driver_idle );
 	level.teddtrial rotateTo((0,angle,0),.1);
 	if(isDefined(zones))
@@ -126,6 +125,11 @@ spawn_TEDD(location, angle, zones, reward_location)
 	teddTrigger setcursorhint( "HINT_NOICON" );
 	
 	teddTrigger thread tedd_trial_trigger();
+	
+	if(getDvarInt("enable_toasts") == 1)
+	{
+		send_toast("Tedd Trials located at " + area_name, "hud_icon_tedd");
+	}
 	
 	level waittill ("trials_ended", result);
 	
@@ -227,7 +231,7 @@ tedd_trial_trigger()
 	}
 }
 
-register_teddtrial(location, angle, zones, reward_location)
+register_teddtrial(location, angle, zones, reward_location, area_name)
 {
 	if(!isDefined(level.teddtrialbots))
 	{
@@ -252,6 +256,7 @@ register_teddtrial(location, angle, zones, reward_location)
 	level.teddtrialbots[id].zones = zones;
 	level.teddtrialbots[id].angle = angle + 90;
 	level.teddtrialbots[id].reward_location = reward_location;
+	level.teddtrialbots[id].area_name = area_name;
 }
 
 register_trialzone(zone, center_location, zone_name)
@@ -346,44 +351,44 @@ init_tedds()
 		{
 			if(getDvar("ui_zm_mapstartlocation") == "town")
 			{
-				register_teddtrial((771.071, -290.728, -61.875), 0, array("zone_town_south","zone_bar","zone_ban","zone_town_barber"), (748.37, -487.865, -61.875));
+				register_teddtrial((771.071, -290.728, -61.875), -90, array("zone_town_south","zone_bar","zone_ban","zone_town_barber"), (748.37, -487.865, -61.875), "Town");
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "transit")
 			{
-				register_teddtrial((-7108.74, 4946.49, -55.875), -93.5464, array("zone_pri"), (-7536.65, 4906.57, -55.875));
+				register_teddtrial((-7108.74, 4946.49, -55.875), -93.5464, array("zone_pri"), (-7536.65, 4906.57, -55.875), "Bus Depot");
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "farm")
 			{
-				register_teddtrial((8180.23, -5811.71, 33.7715), -94.1748, array("zone_brn", "zone_farm_house"), (7799.67, -5770.7, 4.20267));
+				register_teddtrial((8180.23, -5811.71, 33.7715), -94.1748, array("zone_brn", "zone_farm_house"), (7799.67, -5770.7, 4.20267), "Farm");
 			}
 		}
 		else if(getDvar("mapname") == "zm_nuked") //nuketown
 		{
-			register_teddtrial((-1935.53, 697.965, -48.3402), -74.7143, array("openhouse1_backyard_zone","openhouse1_f2_zone","openhouse1_f1_zone"), (-1572.68, 332, -63.5391));
-			register_teddtrial((1494.78, -1.5133, -63.8845), 145.726, array("openhouse2_backyard_zone","openhouse2_f2_zone","openhouse2_f1_zone"), (1608.72, 324.353, -60.8731));
+			register_teddtrial((-1935.53, 697.965, -48.3402), -74.7143, array("openhouse1_backyard_zone","openhouse1_f2_zone","openhouse1_f1_zone"), (-1572.68, 332, -63.5391), "Green House Backyard");
+			register_teddtrial((1494.78, -1.5133, -63.8845), 145.726, array("openhouse2_backyard_zone","openhouse2_f2_zone","openhouse2_f1_zone"), (1608.72, 324.353, -60.8731), "Yellow House Backyard");
 		}
 	}
 	else
 	{
 		if(getDvar("mapname") == "zm_prison") //mob of the dead
 		{
-			register_teddtrial((3620.22, 9503.64, 1530.87), 96.9983, array("zone_infirmary_roof","zone_cafeteria"), (3681.24, 9679.69, 1528.13));
-			register_teddtrial((451.271, 8628.06, 1128.13), 136.758, array("zone_warden_office", "cellblock_shower"), (112.682, 8751.85, 1133.6));
-			register_teddtrial((-897.283, 5742, -71.875), 52.4971, array("zone_dock"), (-734.918, 5950.11, -51.5203));
-			register_teddtrial((758.359, 10359.6, 1344.13), 137.344, array("zone_library"), (672.461, 10466.7, 1336.13));
+			register_teddtrial((3620.22, 9503.64, 1530.87), 96.9983, array("zone_infirmary_roof","zone_cafeteria"), (3681.24, 9679.69, 1528.13), "Cafeteria?");
+			register_teddtrial((451.271, 8628.06, 1128.13), 136.758, array("zone_warden_office", "cellblock_shower"), (112.682, 8751.85, 1133.6), "Wardens Office");
+			register_teddtrial((-897.283, 5742, -71.875), 52.4971, array("zone_dock"), (-734.918, 5950.11, -51.5203), "Docks");
+			register_teddtrial((758.359, 10359.6, 1344.13), 137.344, array("zone_library"), (672.461, 10466.7, 1336.13), "Library");
 		}
 		else if(getDvar("mapname") == "zm_buried") //buried
 		{
-			register_teddtrial((-437.004, 222.706, -25.0735), 86.2858, array("zone_underground_jail","zone_gun_store"), (-415.011, 368.8, -22.4509));
-			register_teddtrial((659.949, 1071.86, 10.3413), 9.76358, array("zone_underground_bar","zone_candy_store","zone_underground_courthouse","zone_church_main"), (1128.76, 906.329, -32.6249));
+			register_teddtrial((-437.004, 222.706, -25.0735), 86.2858, array("zone_underground_jail","zone_gun_store"), (-415.011, 368.8, -22.4509), "Front of Bank");
+			register_teddtrial((659.949, 1071.86, 10.3413), 9.76358, array("zone_underground_bar","zone_candy_store","zone_underground_courthouse","zone_church_main"), (1128.76, 906.329, -32.6249), "Graveyard");
 		}
 		else if(getDvar("mapname") == "zm_transit") //transit
 		{
-			register_teddtrial((-5011.39, -7788.78, -59.0191), 132.803, array("zone_gar","zone_din"), (-5160.02, -7201.63, -59.4591));
-			register_teddtrial((11032.9, 7884.8, -580.284), -62.5179, array("zone_pcr","zone_pow_warehouse"), (10912.6, 7541.54, -588.767));
-			register_teddtrial((8180.23, -5811.71, 33.7715), -94.1748, array("zone_brn", "zone_farm_house"), (7799.67, -5770.7, 4.20267));
-			register_teddtrial((-7108.74, 4946.49, -55.875), -93.5464, array("zone_pri"), (-7536.65, 4906.57, -55.875));
-			register_teddtrial((771.071, -290.728, -61.875), 0, array("zone_town_south","zone_bar","zone_ban","zone_town_barber"), (748.37, -487.865, -61.875));
+			register_teddtrial((-5011.39, -7788.78, -59.0191), 132.803, array("zone_gar","zone_din"), (-5160.02, -7201.63, -59.4591), "Diner");
+			register_teddtrial((11032.9, 7884.8, -580.284), -62.5179, array("zone_pcr","zone_pow_warehouse"), (10912.6, 7541.54, -588.767), "Powerhouse");
+			register_teddtrial((8180.23, -5811.71, 33.7715), -94.1748, array("zone_brn", "zone_farm_house"), (7799.67, -5770.7, 4.20267), "Farm");
+			register_teddtrial((-7108.74, 4946.49, -55.875), -93.5464, array("zone_pri"), (-7536.65, 4906.57, -55.875), "Bus Depot");
+			register_teddtrial((771.071, -290.728, -61.875), 0, array("zone_town_south","zone_bar","zone_ban","zone_town_barber"), (748.37, -487.865, -61.875), "Town");
 		}
 		else if(getDvar("mapname") == "zm_tomb") //origins
 		{
@@ -1145,11 +1150,12 @@ playtrialsmusic()
     ent thread stoptrialsmusic();
 	themes = array("cw","bo6_1");
 	chosen_themes = random(themes);
-	if(getDvarInt("enable_debug") = 1)
+//	level.players[0] iprintln (chosen_themes);
+	if(getDvarInt("enable_debug") == 1)
 	{
 		foreach(player in level.players)
 		{
-			player iprintln(chosen_theme);
+			player iprintln(chosen_themes);
 		}
 	}
 	if(chosen_themes == "bo6_1")
@@ -1200,10 +1206,10 @@ spawn_rewards(rarity, location, angle)
 		{
 			perks[perks.size] = "specialty_marathon_zombies";
 		}
-		if(level.zombiemode_using_doubletap_perk == 1)
-		{
-			perks[perks.size] = "specialty_doubletap_zombies";
-		}
+//		if(level.zombiemode_using_doubletap_perk == 1)
+//		{
+//			perks[perks.size] = "specialty_doubletap_zombies";
+//		}
 	}
 	else if(rarity == 3) //Legendary
 	{

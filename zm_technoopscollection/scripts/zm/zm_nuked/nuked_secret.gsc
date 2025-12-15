@@ -19,6 +19,7 @@
 main()
 {
 	precachemodel("p_glo_books_single");
+	precacheshader("zm_hud_icon_sq_keycard");
 	replacefunc(maps\mp\zm_nuked::nuked_standard_intermission, ::nuked_standard_intermission);
 	replacefunc(maps\mp\zm_nuked::nuked_doomsday_clock_think, ::nuked_doomsday_clock_think);
 }
@@ -64,7 +65,7 @@ spawnBunker()
 	{
 		BunkerTrigger waittill( "trigger", i );
 		
-		if(i usebuttonpressed())
+		if(i usebuttonpressed() && !is_quest_blocked(i))
 		{
 			if(level.mainqueststarted != true)
 			{
@@ -283,6 +284,7 @@ GuidedModeChecks()
 	}
 	updateGuidedHUDIcon((1399.2, 504.485, -57.875), "objective_marker", true);
 	updateGuidedHUD("Place the ID in the fireplace to begin the first part of the cleaning process.");
+	level.soulboxactive = 0;
 	while(level.soulboxactive != 1)
 	{
 		wait 0.1;
@@ -316,6 +318,7 @@ GuidedModeChecks()
 	level waittill ("update_guided");
 	updateGuidedHUDIcon((-1430.84, 1096.35, -63.875), "objective_marker", true);
 	updateGuidedHUD("Begin the Payload overload.");
+	level.payloadstarted = 0;
 	while(level.payloadstarted != 1)
 	{
 		wait 0.1;
@@ -349,8 +352,8 @@ createBombIcon()
 	bombIcon.color = ( 0.5, 0.5, 1 );
     bombIcon.isshown = 1;
     bombIcon.archived = 0;
-    bombIcon setshader( "objective_marker", 4, 4 );
-    bombIcon setwaypoint( 0, "objective_marker", false );
+	bombIcon setshader( "objective_marker", 4, 4 );
+	bombIcon setwaypoint( 0, "objective_marker", false );
 	self waittill ("bomb_defused");
 	bombIcon destroy();
 }
@@ -536,7 +539,8 @@ spawnIDPart()
 		{
 			level notify ("secret_id_pickedup");
 			level.hasid = true;
-			level thread notify_player_action(i.name + " picked up the ID");
+//			level thread notify_player_action(i.name + " picked up the ID");
+			send_toast(i.name + " picked up the ID", "zm_hud_icon_sq_keycard", "Quest Item");
 			CardPickup delete();
 			CardModel delete();
 			break;
@@ -615,7 +619,8 @@ spawnSoulboxPickup()
 //				level.iscardclean = true;
 			}
 			
-			level thread notify_player_action(i.name + " picked up the ID");
+//			level thread notify_player_action(i.name + " picked up the ID");
+			send_toast(i.name + " picked up the ID", "zm_hud_icon_sq_keycard", "Quest Item");
 			
 			SoulBoxPickup delete();
 			SoulBoxModel delete();
@@ -699,7 +704,6 @@ soul_box_particle_trail(zombie)
 	soul playsound ("zmb_souls_collect");
     soul.owner = self;
     soul delete();
-	fx delete();
 	playfx(level._effect["powerup_grabbed"], self.origin);
 	self.totalsouls += 1;
 	if(self.totalsouls == 1)
@@ -713,7 +717,6 @@ remove_souls_on_box_finish(fx, soulBox)
 	self endon ("death");
 	soulBox waittill ("soul_box_done");
 	self delete();
-	fx delete();
 }
 
 add_flame()
@@ -724,7 +727,6 @@ add_flame()
     fx = playfxontag( level._effect["fx_fire_fireplace_md"], flame, "tag_origin" );
 	self waittill ("soul_box_done");
 	flame delete();
-	fx delete();
 }
 
 waiting_through_ui()
@@ -853,6 +855,10 @@ loop_payload_icon()
 		{
 			updateGuidedHUDIcon(self.origin, "objective_marker", true);
 			wait 0.01;
+		}
+		else
+		{
+			break;
 		}
 	}
 }
@@ -1021,7 +1027,6 @@ spawn_zombie_with_particle_trail(spawner)
     wait 0.8;
     soul.owner = self;
     soul delete();
-	fx delete();
 	playfx(level._effect["powerup_grabbed"], ai.origin);
 	ai set_zombie_run_cycle("sprint");
 }
@@ -1078,7 +1083,10 @@ spawn_defuse_machines(location, angle)
 	defusalBomb moveto(ending_location,10);
 	defusalBomb waittill("movedone");
 
-	defusalTrigger thread createBombIcon();
+	if(getDvarInt("guided_mode") == 1)
+	{
+		defusalTrigger thread createBombIcon();
+	}
 
 	defusalTrigger setHintString("Press ^3&&1 ^7to defuse.");
 	defusalTrigger.candefuse = true;
@@ -1086,6 +1094,10 @@ spawn_defuse_machines(location, angle)
 	
 	defusalModel thread alarm_effect();
 	
+	if(!isDefined(level.bombs))
+	{
+		level.bombs = [];
+	}
 	level.bombs[level.bombs.size] = defusalTrigger;
 	
 	for(;;)
@@ -1117,7 +1129,8 @@ spawn_defuse_machines(location, angle)
 			}
 			else
 			{
-				level thread notify_player_action(i.name + " successfully defused a bomb");
+//				level thread notify_player_action(i.name + " successfully defused a bomb");
+				send_toast(i.name + " successfully defused a bomb.", "zm_hud_icon_sq_keycard", "Quest Item");
 				defusalTrigger setHintString("Bomb Defused!");
 			}
 		}
@@ -1460,7 +1473,6 @@ jugPickup(location, destination)
 			jugParticle delete();
 			jugTrigger delete();
 			jugModel delete();
-			fx delete();
 			foreach(player in level.players)
 			{
 				player thread give_perk( "specialty_armorvest", 1 );

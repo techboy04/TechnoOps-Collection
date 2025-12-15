@@ -44,49 +44,6 @@ init()
 		return;
 	}
 
-	if(level.script == "zm_transit")
-	{
-		level thread spawnGumballMachine((-7060.83, 4147.14, -63.7768), 90); //Bus Depot
-		level thread spawnGumballMachine((-5424.36, -7775.02, -63.2332), 0); //Diner
-		level thread spawnGumballMachine((7764.63, -6324.16, 117.125), 30); //Farm
-		level thread spawnGumballmachine((10957.6, 8058.04, -561.764), -180); //Power Station
-		level thread spawnGumballMachine((1115.55, -1114.27, 120.125), 130); //Town
-	}
-	else if(level.script == "zm_prison")
-	{
-		level thread spawnGumballMachine((351.142, 10194.9, 1336.13), 0);
-		level thread spawnGumballMachine((-1056.36, 8527.64, 1336.13), 40);
-		level thread spawnGumballmachine((3235.64, 9286.04, 1704.13), 0);
-		level thread spawnGumballmachine((758.62, 6538.42, 212.13), 140);
-	}
-	else if(level.script == "zm_nuked")
-	{
-		level thread spawnGumballmachine((-499.377, 291.778, -61.1773), -18);
-		level thread spawnGumballMachine((-1578.5, 124.496, -63.209), 160);
-		level thread spawnGumballMachine((1731.97, 765.43, -63.6793), -160);
-	}
-	else if(level.script == "zm_tomb")
-	{
-		level thread spawnGumballMachine((2972.35, 5254.26, -376.51), 180);
-		level thread spawnGumballMachine((-564.998, 3725.61, -295.875), -50);
-		level thread spawnGumballMachine((-2673.69, 360.359, 48.125), -100);
-		level thread spawnGumballMachine((684.989, -3958.89, 301.647), 42);
-		level thread spawnGumballMachine((-262.565, 133.323, -750.968), -27.7957);
-	}
-	else if(level.script == "zm_buried")
-	{
-		level thread spawnGumballMachine((-463.641, -540.399, -11.875), 180);
-		level thread spawnGumballMachine((1642.36, 97.387, -1.11589), 135);
-		level thread spawnGumballMachine((6749.98, 881.081, 108.125), -170);
-	}
-	else if(level.script == "zm_highrise")
-	{
-		level thread spawnGumballMachine((1740.47, 1768.67, 3217.61), -176.285);
-		level thread spawnGumballMachine((1642.83, 1476.36, 3052.33), -74.9744);
-		level thread spawnGumballMachine((2137.17, -181.075, 1296.13), 55.5891);
-		level thread spawnGumballMachine((2332.43, -596.083, 2880.13), 14.8187);
-	}
-
 	register_gobblegum( "reign_drops", "Reign Drops", "gum_reign_drops", ::spawn_all_powerups, "activate", "Spawn every powerup in the map.", "pink", 0, ::default_check_use, false);
 	register_gobblegum( "whos_keeping_score", "Whos Keeping Score", "gum_whos_keeping_score", ::spawn_double_points, "activate", "Spawn a Double Points powerup.", "pink", 0, ::default_check_use, false);
 	register_gobblegum( "nuclear_winter", "Nuclear Winter", "gum_nuclear_winter", ::spawn_nuke, "activate", "Spawn a Nuke powerup.", "pink", 0, ::default_check_use, false);
@@ -132,6 +89,49 @@ init()
 
 // Uncomment or use in another script to have a custom list of gobblegums. This WILL replace the original list of gobbles used in the machine.
 //	level.customgumslist = array("ephemeral_enhancement");
+
+	if(level.script == "zm_transit")
+	{
+		level thread spawnGumballMachine((-7060.83, 4147.14, -63.7768), 90); //Bus Depot
+		level thread spawnGumballMachine((-5424.36, -7775.02, -63.2332), 0); //Diner
+		level thread spawnGumballMachine((7764.63, -6324.16, 117.125), 30); //Farm
+		level thread spawnGumballmachine((10957.6, 8058.04, -561.764), -180); //Power Station
+		level thread spawnGumballMachine((1115.55, -1114.27, 120.125), 130); //Town
+	}
+	else if(level.script == "zm_prison")
+	{
+		level thread spawnGumballMachine((351.142, 10194.9, 1336.13), 0);
+		level thread spawnGumballMachine((-1056.36, 8527.64, 1336.13), 40);
+		level thread spawnGumballmachine((3235.64, 9286.04, 1704.13), 0);
+		level thread spawnGumballmachine((758.62, 6538.42, 212.13), 140);
+	}
+	else if(level.script == "zm_nuked")
+	{
+		level thread spawnGumballmachine((-499.377, 291.778, -61.1773), -18);
+		level thread spawnGumballMachine((-1578.5, 124.496, -63.209), 160);
+		level thread spawnGumballMachine((1731.97, 765.43, -63.6793), -160);
+	}
+	else if(level.script == "zm_tomb")
+	{
+		level thread spawnGumballMachine((2972.35, 5254.26, -376.51), 180);
+		level thread spawnGumballMachine((-564.998, 3725.61, -295.875), -50);
+		level thread spawnGumballMachine((-2673.69, 360.359, 48.125), -100);
+		level thread spawnGumballMachine((684.989, -3958.89, 301.647), 42);
+		level thread spawnGumballMachine((-262.565, 133.323, -750.968), -27.7957);
+	}
+	else if(level.script == "zm_buried")
+	{
+		level thread spawnGumballMachine((-463.641, -540.399, -11.875), 180);
+		level thread spawnGumballMachine((1642.36, 97.387, -1.11589), 135);
+		level thread spawnGumballMachine((6749.98, 881.081, 108.125), -170);
+	}
+	else if(level.script == "zm_highrise")
+	{
+		level thread spawnGumballMachine((1740.47, 1768.67, 3217.61), -176.285);
+		level thread spawnGumballMachine((1642.83, 1476.36, 3052.33), -74.9744);
+		level thread spawnGumballMachine((2137.17, -181.075, 1296.13), 55.5891);
+		level thread spawnGumballMachine((2332.43, -596.083, 2880.13), 14.8187);
+	}
 
 	level thread reset_gobble_machine_uses();
 //	level thread command_thread();
@@ -398,7 +398,7 @@ command_thread()
 				{
 					if(isDefined(args[1]))
 					{
-						player givegobble(args[1]);
+						player givegobble(args[1], 1);
 					}
 					else
 					{
@@ -416,7 +416,7 @@ command_thread()
 	}
 }
 
-givegobble(id)
+givegobble(id, skipinfo)
 {
 	key = getarraykeys( level.gobblegums );
 	foreach(k in key)
@@ -428,8 +428,15 @@ givegobble(id)
 			self notify ("gobblegum_switched");
 			wait 0.01;
 			self.gobblegum = k;
-			self iprintln("Given " + level.gobblegums[k].name + " to you");
+			if(isDefined(skipinfo) && skipinfo == 1)
+			{
+				self iprintln("Given " + level.gobblegums[k].name + " to you");
+			}
 			self.gobbleHUDText setText ("[{+actionslot 3}]");
+			if(!isDefined(skipinfo) || skipinfo != 1)
+			{
+				self thread gobblegum_get_hud(id);
+			}
 			return;
 		}
 	}
@@ -616,6 +623,7 @@ spawnGumballMachine(location, angle)
 	
 	gumballModel.user = undefined;
 	gumballModel.chosen_gum = undefined;
+	gumballModel.beingUsed = 0;
 	
 	for(;;)
 	{
@@ -2090,7 +2098,7 @@ playerlaststand( einflictor, attacker, idamage, smeansofdeath, sweapon, vdir, sh
 
 is_gobble_active(gobble_id)
 {
-	if(self.gobblegum.id == gobble_id && (isDefined(self.gobblegum_active) && self.gobblegum_active == 1))
+	if(level.gobblegums[self.gobblegum].id == gobble_id && (isDefined(self.gobblegum_active) && self.gobblegum_active == 1))
 	{
 		return true;
 	}
