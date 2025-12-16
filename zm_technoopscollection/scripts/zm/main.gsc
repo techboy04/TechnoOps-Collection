@@ -675,6 +675,7 @@ onPlayerConnect()
     for(;;)
     {
         level waittill("connected", player);
+		player thread onPlayerDowned();
 		if (getDvarInt("gamemode") != 0)
 		{
 			player iprintln("This gamemode is in beta! Join the discord for updates and feedback: discord.gg/dkwyDzW");
@@ -732,7 +733,6 @@ onPlayerConnect()
 		{
 			player thread play_revive_sound();
 		}
-		player thread play_downed_sound();
 		player thread custom_retain_array();
 		player setClientDvar("r_lodbiasrigid", -1000);
 		player setClientDvar("r_lodbiasskinned", -1000);
@@ -6682,7 +6682,6 @@ init_upgradedperks()
 
 player_upgradedperks()
 {
-	self thread onPlayerDowned();
 	self thread mulekick_save_weapons();
 	self thread mulekick_restore_weapons();
 	self thread doPHDdive();
@@ -6699,6 +6698,11 @@ onPlayerDowned()
 	for(;;)
 	{
 		self waittill_any( "player_downed", "fake_death", "entering_last_stand");
+		send_toast(self.name, "waypoint_revive", "Player Downed");
+		foreach(player in level.players)
+		{
+			player playlocalsound(getsound(3));
+		}
 //		self.hasPHD = undefined; //resets the flopper variable
 	}
 }
@@ -16340,19 +16344,6 @@ play_revive_sound()
 	}
 }
 
-play_downed_sound()
-{
-	self endon ("disconnect");
-	for(;;)
-	{
-		self waittill ( "player_downed");
-		foreach(player in level.players)
-		{
-			player playlocalsound(getsound(3));
-		}
-	}
-}
-
 afk_enable()
 {
 	if(self.canafk == 1)
@@ -17006,7 +16997,7 @@ faderevivemessageover( playertorevive, time )
 {
     if(getDvarInt("enable_toasts") == 1)
 	{
-		send_toast(playertorevive.name, "waypoint_revive", "Player Downed");
+
 	}
 	else
 	{
