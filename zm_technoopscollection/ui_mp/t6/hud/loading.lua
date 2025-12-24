@@ -139,7 +139,7 @@ CoD.Loading.DidYouKnow.zombies = {
 	"TechnoOps Collection was inspired by the Black Ops 3 Custom Mod, Reapers Collection!",
 	"This mod started as only a simple script, now its a whole mod with way more features! Look how far we've come!",
 	"The Exfil feature lets you finish a match in style! Similar to Cold War and Vanguard",
-	"The Rampage Statue was an attempt of the Rampage Inducer but can't be toggled off.",
+	"The Rampage Statue was an attempt of the Rampage Inducer. Can be toggled!",
 	"This mod has its own custom story in Tranzit and Nuketown!",
 	"Try out Guided mode for learning the mod quests! They get added soon after the quest is released.",
 	"Crouch underneath perk machines, they may have a bonus for you!",
@@ -165,6 +165,7 @@ CoD.Loading.DidYouKnow.zombies = {
 	"On Tranzit, the Jetgun will not explode and all players can obtain it!",
 	"On Nuketown, you can choose how the perks are handled. Every bell chime, every round, all at once, or its normal randomized rounds!",
 	"Mod specific custom settings and dvars you make will be loaded every time you launch!",
+	"Want a challenge? Activate a Tedd Trial! Coming to a drop point near you!",
 	"Need help? Join the mods Discord server!: https://discord.gg/dkwyDzW"
 }
 

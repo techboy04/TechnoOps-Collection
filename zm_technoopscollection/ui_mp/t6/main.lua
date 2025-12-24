@@ -176,7 +176,7 @@ CoD.InitArchiveDvars = function()
 		Engine.Exec(nil, "seta enable_rampage 1")
 	end
 	if UIExpression.DvarString(nil, "rampage_max_round") == "" then
-		Engine.Exec(nil, "seta rampage_max_round 20")
+		Engine.Exec(nil, "seta rampage_max_round 50")
 	end
 	if UIExpression.DvarString(nil, "enable_compass") == "" then
 		Engine.Exec(nil, "seta enable_compass 1")
@@ -453,6 +453,9 @@ CoD.InitArchiveDvars = function()
 	end
 	if UIExpression.DvarString(nil, "enable_toasts") == "" then
 		Engine.Exec(nil, "seta enable_toasts 1")
+	end
+	if UIExpression.DvarString(nil, "enable_shieldpartssurvival") == "" then
+		Engine.Exec(nil, "seta enable_shieldpartssurvival 1")
 	end
 end
 

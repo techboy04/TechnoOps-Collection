@@ -22,6 +22,8 @@ main()
 	{
 		return;
 	}
+	level.modlist[level.modlist.size] = "Tedd Trials";
+    level.modids[level.modids.size] = "teddtrials";
 	precachemodel("p6_anim_zm_bus_driver");
 	precacheshader("hud_icon_reward");
 	precacheshader("hud_icon_tedd");
@@ -135,9 +137,12 @@ spawn_TEDD(location, angle, zones, reward_location, area_name)
 	
 	teddTrigger delete();
 	
-	foreach(player in level.players)
+	if(isDefined(result) && result != "timed_out")
 	{
-		player playlocalsound ("trials_end");
+		foreach(player in level.players)
+		{
+			player playlocalsound ("trials_end");
+		}
 	}
 	
 	if(result == "true")
@@ -352,6 +357,7 @@ init_tedds()
 			if(getDvar("ui_zm_mapstartlocation") == "town")
 			{
 				register_teddtrial((771.071, -290.728, -61.875), -90, array("zone_town_south","zone_bar","zone_ban","zone_town_barber"), (748.37, -487.865, -61.875), "Town");
+				register_teddtrial((2309.89, 581.716, -55.875), -125.966, array("zone_bar"), (2038.19, 387.466, -50.5134), "Bar");
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "transit")
 			{
@@ -359,7 +365,8 @@ init_tedds()
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "farm")
 			{
-				register_teddtrial((8180.23, -5811.71, 33.7715), -94.1748, array("zone_brn", "zone_farm_house"), (7799.67, -5770.7, 4.20267), "Farm");
+				register_teddtrial((8180.23, -5811.71, 33.7715), -94.1748, array("zone_brn"), (7799.67, -5770.7, 4.20267), "Farm");
+				register_teddtrial((7820.38, -6395.47, 117.125), -24.3732, array("zone_farm_house"), (7799.67, -5770.7, 4.20267), "Farm House");
 			}
 		}
 		else if(getDvar("mapname") == "zm_nuked") //nuketown
@@ -388,7 +395,10 @@ init_tedds()
 			register_teddtrial((11032.9, 7884.8, -580.284), -62.5179, array("zone_pcr","zone_pow_warehouse"), (10912.6, 7541.54, -588.767), "Powerhouse");
 			register_teddtrial((8180.23, -5811.71, 33.7715), -94.1748, array("zone_brn", "zone_farm_house"), (7799.67, -5770.7, 4.20267), "Farm");
 			register_teddtrial((-7108.74, 4946.49, -55.875), -93.5464, array("zone_pri"), (-7536.65, 4906.57, -55.875), "Bus Depot");
-			register_teddtrial((771.071, -290.728, -61.875), 0, array("zone_town_south","zone_bar","zone_ban","zone_town_barber"), (748.37, -487.865, -61.875), "Town");
+			register_teddtrial((771.071, -290.728, -61.875), -90, array("zone_town_south","zone_ban","zone_town_barber"), (748.37, -487.865, -61.875), "Town");
+			
+			register_teddtrial((2309.89, 581.716, -55.875), -125.966, array("zone_bar"), (2038.19, 387.466, -50.5134), "Bar");
+			register_teddtrial((7820.38, -6395.47, 117.125), -24.3732, array("zone_farm_house"), (7799.67, -5770.7, 4.20267), "Farm House");
 		}
 		else if(getDvar("mapname") == "zm_tomb") //origins
 		{
@@ -502,7 +512,7 @@ start_challenge()
 	level.tedd_score_max = 10;
 	level.teddtier = 0;
 	timer = 180;
-	challenges = array("action_kill_air","action_kill_crouch","action_kill_ads","action_kill_hipfire","no_dmg","grenade_kill");
+	challenges = array("action_kill_air","action_kill_crouch","action_kill_ads","action_kill_hipfire","no_dmg","grenade_kill","higher");
 	if(isDefined(self.zones))
 	{
 		challenges[challenges.size] = "zone_capture";
@@ -566,6 +576,13 @@ start_challenge()
 			}
 			level.tedd_score_max = set_max_score(150);
 			level thread trials_icon(get_registered_zone_location(level.teddtrial.activezone));
+			break;
+		case "higher":
+			level.tedd_score_max = set_max_score(150);
+			foreach(player in level.players)
+			{
+				player thread tedd_trial_kill("higher");
+			}
 			break;
     	default:
         	shader = "";
@@ -658,6 +675,13 @@ tedd_trial_kill(type)
 		else if(type == "zone_kill")
 		{
 			if(self get_player_zone() == level.teddtrial.activezone)
+			{
+				level notify ("tedd_trials_score");
+			}
+		}
+		else if(type == "higher")
+		{
+			if(self.origin[2] > zombie.origin[2])
 			{
 				level notify ("tedd_trials_score");
 			}
@@ -1046,6 +1070,10 @@ getChallengeText(type)
 	{
 		return "Take no damage";
 	}
+	else if(type == "higher")
+	{
+		return "Kill Zombies at a Higher Elevation.";
+	}
 }
 
 play_tedd_trials_vox(type)
@@ -1255,7 +1283,16 @@ spawn_rewards(rarity, location, angle)
 	center = location + (0,0,40);
 	
 	level thread spawn_points(center, score);
-	level thread spawn_weapon_reward(center + (80,0,0), chosen_weapon);
+	if(getDvarInt("gamemode") == 1 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
+	{
+		powerup = array("insta_kill", "full_ammo", "double_points", "carpenter", "free_perk", "bonus_points_team");
+		chosen_powerup = random(powerup);
+		level maps\mp\zombies\_zm_powerups::specific_powerup_drop(chosen_powerup, center + (80,0,0));
+	}
+	else
+	{
+		level thread spawn_weapon_reward(center + (80,0,0), chosen_weapon);
+	}
 	level thread spawn_perk_reward(center + (-80,0,0), chosen_perk);
 }
 

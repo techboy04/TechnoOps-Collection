@@ -43,6 +43,7 @@ init()
 	level thread facility_talk();
 	level thread setup_sidestuff();
 	level thread talk_round_think();
+	level thread spawnSecretRadio();
 	level thread spawn_shootable_power((517.701, -225.238, -1.60953));
 	
 	if(getDvarInt("guided_mode") == 1)
@@ -165,11 +166,13 @@ nukedEEsequence()
 	do_vox_subtitles("Voice", "Seems like it did half the job, maybe find another one to finish the process.", 4, "vox_nuketown_radio_3");
 	level.soulboxphase = 2;
 	spawnSoulBoxStart();
+	level.soulboxphase = 3;
 	do_vox_subtitles("Voice", "It looks readable! Place it near the Bunker, I can teleport it in here.", 4, "vox_nuketown_radio_4");
 	do_vox_subtitles("Voice", "The teleporter is a prototype, too small to teleport me and Marlton out anyways.", 6, "vox_nuketown_radio_5");
 	level.iscardclean = true;
 	
 	level waittill ("secret_id_clean");
+	level.soulboxphase = 4;
 	level.cantalktobunker = false;
 	do_vox_subtitles("Voice", "Lets hope this works.", 1, "vox_nuketown_radio_6");
 	
@@ -194,7 +197,8 @@ nukedEEsequence()
 	level notify ("update_guided");
 	level.cantalktobunker = true;
 	
-	payload_step_start();
+	level thread payload_step_start();
+	level waittill ("after_payload");
 
 	level.holdround = true;
 	level.zombie_total = 0;
@@ -917,34 +921,38 @@ payload_step()
 	level.holdround = false;
 	level.pausedoomsday = false;
 
-	FinalEncounterTrigger = spawn( "trigger_radius", (self.origin), 50, 50, 50 );
-	FinalEncounterTrigger setHintString("Press ^3&&1 ^7to send the Orb \n[Final Encounter] All Players need to be nearby.");
-	FinalEncounterTrigger setcursorhint( "HINT_NOICON" );
+	level.FinalEncounterTrigger = spawn( "trigger_radius", (self.origin), 50, 50, 50 );
+	level.FinalEncounterTrigger setHintString("Press ^3&&1 ^7to send the Orb \n[Final Encounter] A Vote will be casted.");
+	level.FinalEncounterTrigger setcursorhint( "HINT_NOICON" );
+
+	level.payloadorb = self;
 
 	for(;;)
 	{
-		FinalEncounterTrigger waittill( "trigger", i );
+		level.FinalEncounterTrigger waittill( "trigger", i );
 		if ( i usebuttonpressed() )
 		{
-			if(players_are_near(FinalEncounterTrigger.origin, 100))
-			{
-				level thread nuke_flash( 3 );
-				level.holdround = true;
-				level.zombie_total = 0;
-				zombies = getaiarray( level.zombie_team );
-				foreach (i in zombies)
-				{
-					i dodamage(i.health,i.origin);
-				}
-				FinalEncounterTrigger delete();
-				wait 2;
-				self moveTo((-1331.75, 1050, -77.0928),0.8);
-				self waittill( "movedone" );
-				break;
-			}
+			level showVoting(i.name + " wants to start the Final Encounter", i, ::startFinalEncounter);
 		}
 		wait 0.1;
 	}
+}
+
+startFinalEncounter()
+{
+	level thread nuke_flash( 3 );
+	level.holdround = true;
+	level.zombie_total = 0;
+	zombies = getaiarray( level.zombie_team );
+	foreach (i in zombies)
+	{
+		i dodamage(i.health,i.origin);
+	}
+	level.FinalEncounterTrigger delete();
+	wait 2;
+	level.payloadorb moveTo((-1331.75, 1050, -77.0928),0.8);
+	level.payloadorb waittill( "movedone" );
+	level notify ("after_payload");
 }
 
 players_are_near(origin, distance)
@@ -1514,3 +1522,48 @@ custom_jumpscare(location)
 
 
 //(499.823, 256.719, 78.7544)
+
+spawnSecretRadio()
+{
+	location = (1063.71, 123.859, -14.875);
+	angle = 54.0155;
+	
+	radioTrigger = spawn( "trigger_radius", location, 1, 50, 50 );
+	radioTrigger setHintString("");
+	radioTrigger setcursorhint( "HINT_NOICON" );
+	radioModel = spawn( "script_model", location);
+	radioModel setmodel ("p6_zm_buildable_sq_transceiver");
+	radioModel rotateTo((0,angle+90,0),.1);
+	
+	level waittill ("secret_id_pickedup");
+	
+	for(;;)
+	{
+		if(level.soulboxphase == 2)
+		{
+			radioTrigger setHintString("Thats too dirty!");
+		}
+		else if(level.soulboxphase == 3)
+		{
+			radioTrigger setHintString("Press ^3&&1 ^7to scan ID.");
+		}
+		else
+		{
+			radioTrigger setHintString("");
+		}
+		radioTrigger waittill( "trigger", i );
+		if(i usebuttonpressed())
+		{
+			if(level.soulboxphase == 1)
+			{
+
+			}
+			else if(level.soulboxphase == 3)
+			{
+				radioTrigger setHintString("");
+				radioTrigger playsound ("vox_nuketown_secret_1");
+				wait 31;
+			}
+		}
+	}
+}

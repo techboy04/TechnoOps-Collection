@@ -25,6 +25,7 @@
 #include maps\mp\zombies\_zm_spawner;
 #include maps\mp\zombies\_zm_audio_announcer;
 #include maps\mp\zombies\_zm_blockers;
+#include maps\mp\gametypes_zm\_hud;
 #include scripts\zm\aats;
 #include scripts\zm\gobblegum;
 #include scripts\zm\ai;
@@ -203,6 +204,7 @@ init()
 	level removebarriers();
 	level.energy_bar_mode = false;
 	level thread toast_watcher();
+	level thread dvar_updater();
 	level.exfilstarted = 0;
 	
 	setDvar( "g_playerCollision", "nobody" );
@@ -330,7 +332,7 @@ init()
     	level.a_e_slow_areas = 0;
     }
     
-	if(getDvarInt("enable_match_timer") == 1 && getDvarInt("gamemode") == 0)
+	if(getDvarInt("enable_match_timer") == 1)
 	{
 		level thread timer_hud();
 	}
@@ -387,7 +389,7 @@ init()
     	level.modlist[level.modlist.size] = "Exfil";
     	level.modids[level.modids.size] = "exfil";
     }
-    	
+    
     if (getDvarInt("enable_fasttravel") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
     {
     	init_fasttravel();
@@ -427,6 +429,13 @@ init()
     	level.modlist[level.modlist.size] = "Secret Music EE in Survival";
     	level.modids[level.modids.size] = "secretmusic";
     }
+	
+	if(getDvarInt("enable_shieldpartssurvival") == 1)
+	{
+		init_shieldinsurvival();
+    	level.modlist[level.modlist.size] = "Shield Parts in Survival";
+    	level.modids[level.modids.size] = "shieldinsurvival";
+	}
     	
     if (getDvarInt("enable_instantpap") == 1 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
     {
@@ -442,7 +451,7 @@ init()
     	level.modids[level.modids.size] = "globalatm";
     }
 
-    if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
+    if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
     {
     	init_enemycounter();
     	level.modlist[level.modlist.size] = "Enemy Counter";
@@ -581,6 +590,27 @@ init()
 	}
 }
 
+dvar_updater()
+{
+	level endon ("end_game");
+	for(;;)
+	{
+		if(getDvarInt("perk_limit") != level.perk_purchase_limit)
+		{
+			if(getDvarInt("perk_limit") > 10)
+			{
+				level.perk_purchase_limit = 10;
+				setDvar("perk_limit", 10);
+			}
+			else
+			{
+				level.perk_purchase_limit = getDvarInt("perk_limit");
+			}
+		}
+		wait 0.1;
+	}
+}
+
 check_quickrevive_for_hotjoin( disconnecting_player )
 {
     solo_mode = 0;
@@ -675,6 +705,7 @@ onPlayerConnect()
     for(;;)
     {
         level waittill("connected", player);
+		player notifyonplayercommand("accept_vote", "+actionslot 4");
 		player thread onPlayerDowned();
 		if (getDvarInt("gamemode") != 0)
 		{
@@ -710,6 +741,7 @@ onPlayerConnect()
 			player.suppress_points = 0;
 			player.lightchanges = 0;
 			player.totallightchanges = 0;
+			player thread movement_checker();
 //			player thread moveCheckHUD();
 		}
 		else if (getDvarInt("gamemode") == 5)
@@ -813,6 +845,7 @@ create_client_dvar( dvar, set )
 		self setClientDvar(dvar, set);
 }
 
+
 init_dvars()
 {
 	create_dvar("enable_trials", 1);
@@ -821,7 +854,7 @@ init_dvars()
 	create_dvar("enable_permaperks", 0);
 	//Rage Inducer
 	create_dvar("enable_rampage", 1);
-	create_dvar("rampage_max_round", 20);
+	create_dvar("rampage_max_round", 50);
 	//Compass
 	create_dvar( "enable_compass", 1);
     create_dvar( "enable_direction", 1 );
@@ -932,6 +965,8 @@ init_dvars()
 	create_dvar("gungame_max_score", 8);
 	create_dvar("enable_toasts", 1);
 	create_dvar("power_id", 36631);
+	create_dvar("enable_shieldpartssurvival", 1);
+	create_dvar("movement_forgiving_range", 5);
 }
 
 init_player_things()
@@ -989,6 +1024,8 @@ init_player_things()
 			self player_vghudanim();
 		if (getDvarInt("enable_secretmusicsurvival") == 1)
 			self player_secretmusic();
+		if(getDvarInt("enable_shieldpartssurvival") == 1)
+			player_shieldinsurvival();
 		if (getDvarInt("enable_instantpap") == 1)
 			self player_instantpap();
 				
@@ -1057,6 +1094,8 @@ init_player_things()
 
 change_zombies_speed(speedtoset){
 	level endon("end_game");
+	level notify ("reset_zombies_speed");
+	level endon ("reset_zombies_speed");
 	sprint = speedtoset;
 	can_sprint = false;
  	for(;;){
@@ -1110,7 +1149,7 @@ nuke_flash( duration )
 	fadetowhite destroy();
 }
 
-fake_nuke_flash()
+fake_nuke_flash(duration)
 {
 	self playlocalsound( "evt_nuke_flash" );
 
@@ -1124,7 +1163,14 @@ fake_nuke_flash()
 	fadetowhite setshader( "white", 640, 480 );
 	fadetowhite fadeovertime( 0.2 );
 	fadetowhite.alpha = 0.8;
-	wait 1;
+	if(isDefined(duration))
+	{
+		wait duration;
+	}
+	else
+	{
+		wait 1;
+	}
 	fadetowhite fadeovertime( 1 );
 	fadetowhite.alpha = 0;
 	wait 1.1;
@@ -3214,6 +3260,18 @@ GetLocationsFromShooting()
         trace = bullettrace(eye, eye + direction_vec, 0, undefined);
         self iprintln(trace["position"]);
 		println(trace["position"]);
+		if(!isDefined(shootDebugModel))
+		{
+			shootDebugModel = spawn( "script_model", (trace["position"] + (0,0,20)), 1, 50, 50 );
+			shootDebugModel setmodel (getDvar("debug_model"));
+			shootDebugModel.origin = trace["position"] + (0,0,20);
+			shootDebugModel.angles = self.angles;
+		}
+		else
+		{
+			shootDebugModel.origin = trace["position"] + (0,0,20);
+			shootDebugModel.angles = self.angles;
+		}
         wait 0.1;
     }
 }
@@ -3982,7 +4040,7 @@ player_exfil()
 	{
 		return;
 	}
-	self thread exfilHUD();
+//	self thread exfilHUD();
 	self thread downOnExfil();
 //	self thread showscoreboardtext();
 }
@@ -4088,97 +4146,7 @@ spawnExfil()
 		{
 			if ( i usebuttonpressed() )
 			{
-				
-				if (level.exfilvoting == 0)
-				{
-					level.exfilplayervotes = 0;
-					level.exfilvoting = 1;
-
-					level.exfilplayervotes += 1;
-					i.exfilvoted = 1;
-					if (level.exfilplayervotes >= level.players.size)
-					{
-						level.votingsuccess = 1;
-						level notify ("voting_finished");
-					}
-
-					if (level.players.size > 1)
-					{
-						level thread exfilVoteTimer();
-						foreach ( player in get_players() )
-						{
-							player thread showvoting(i);
-							player thread checkVotingInput();
-							player.canrespawn = 0;
-						}
-					
-						if (level.votingsuccess != 1)
-						{
-							level waittill_any ("voting_finished","voting_expired");
-						}
-					}
-					else
-					{
-						level.votingsuccess = 1;
-					}
-
-					if (level.votingsuccess == 1)
-					{
-						level.exfilvoting = 0;
-						earthquake( 0.5, 0.5, i.origin, 800 );
-						foreach ( player in get_players() )
-						{
-							player playlocalsound( "evt_nuke_flash" );
-						}
-						level notify ("trials_ended", "false");
-						fadetowhite = newhudelem();
-						fadetowhite.x = 0;
-						fadetowhite.y = 0;
-						fadetowhite.alpha = 0;
-						fadetowhite.horzalign = "fullscreen";
-						fadetowhite.vertalign = "fullscreen";
-						fadetowhite.foreground = 1;
-						fadetowhite setshader( "white", 640, 480 );
-						fadetowhite fadeovertime( 0.2 );
-						fadetowhite.alpha = 0.8;
-						wait 1;
-					
-						kill_current_zombies();
-						level.exfilstarted = 1;
-						level thread fixZombieTotal();
-						if(level.ragestarted != 1)
-						{
-							level thread change_zombies_speed("sprint");
-						}
-						level.zombie_vars[ "zombie_spawn_delay" ] = 0.1;
-						playfx( level._effect[ "powerup_on" ], level.exfillocation + (0,0,30) );
-						playfx( level._effect[ "lght_marker" ], level.exfillocation );
-						level thread spawnExit();
-						level thread spawnMiniBoss();
-						level thread maintain_exfil_zombie_count();
-						level notify ("exfil_started");
-//						playsound(do_vox("exfil_during"));
-
-						if(getDvarInt("gamemode") == 4)
-						{
-							foreach(player in level.players)
-							{
-								player.lightchanges = 99;
-								player thread reset_punishments();
-								player.beingPunished = 0;
-							}
-						
-							change_light(0);
-						}
-					
-						fadetowhite fadeovertime( 1 );
-						fadetowhite.alpha = 0;
-						wait 1.1;
-						fadetowhite destroy();
-						
-						startCountdown(level.starttimer);
-					}
-				}
+				level thread showVoting(i.name + " wants to Initiate an Exfil", i, ::start_exfil);
 			}
 			exfilTrigger setHintString("^7Press ^3&&1 ^7to call an exfil");
 		}
@@ -4189,6 +4157,66 @@ spawnExfil()
 
 		wait 0.5;
 	}
+}
+
+start_exfil(i)
+{
+	if(isDefined(i))
+	{
+		earthquake( 0.5, 0.5, i.origin, 800 );
+	}
+	foreach ( player in get_players() )
+	{
+		player playlocalsound( "evt_nuke_flash" );
+	}
+	level notify ("trials_ended", "timed_out");
+	fadetowhite = newhudelem();
+	fadetowhite.x = 0;
+	fadetowhite.y = 0;
+	fadetowhite.alpha = 0;
+	fadetowhite.horzalign = "fullscreen";
+	fadetowhite.vertalign = "fullscreen";
+	fadetowhite.foreground = 1;
+	fadetowhite setshader( "white", 640, 480 );
+	fadetowhite fadeovertime( 0.2 );
+	fadetowhite.alpha = 0.8;
+	wait 1;
+				
+	kill_current_zombies();
+	level.exfilstarted = 1;
+	level thread fixZombieTotal();
+	if(level.ragestarted != 1)
+	{
+		level thread change_zombies_speed("sprint");
+	}
+	level.zombie_vars[ "zombie_spawn_delay" ] = 0.1;
+	playfx( level._effect[ "powerup_on" ], level.exfillocation + (0,0,30) );
+	playfx( level._effect[ "lght_marker" ], level.exfillocation );
+	level thread spawnExit();
+	level thread spawnMiniBoss();
+	level thread maintain_exfil_zombie_count();
+	level notify ("exfil_started");
+
+	if(getDvarInt("gamemode") == 4)
+	{
+		foreach(player in level.players)
+		{
+			player.lightchanges = 99;
+			player thread reset_punishments();
+			player.beingPunished = 0;
+		}
+		change_light(0);
+	}
+					
+	fadetowhite fadeovertime( 1 );
+	fadetowhite.alpha = 0;
+	wait 1.1;
+	fadetowhite destroy();
+	foreach(player in level.players)
+	{
+		player thread exfilHUD();
+	}
+	startCountdown(level.starttimer);
 }
 
 kill_current_zombies()
@@ -4223,6 +4251,10 @@ startCountdown(numtoset)
 	level thread do_vox("exfil_failed");
 	wait 4;
 	level notify ("exfil_end");
+	foreach(player in level.players)
+	{
+		player thread downOnExfil();
+	}
 }
 
 exfilHUD()
@@ -4269,7 +4301,7 @@ exfilHUD()
 	exfil_target.x += 20;
 	exfil_target.y -= 5;
 	exfil_target.fontscale = 1;
-	exfil_target.alpha = 0;
+	exfil_target.alpha = 1;
 	exfil_target.color = ( 1, 1, 1 );
 	exfil_target.hidewheninmenu = 1;
 	exfil_target.foreground = 1;
@@ -4284,7 +4316,7 @@ exfilHUD()
 	exfil_kills.x += 20;
 	exfil_kills.y -= 5;
 	exfil_kills.fontscale = 1;
-	exfil_kills.alpha = 0;
+	exfil_kills.alpha = 1;
 	exfil_kills.color = ( 1, 1, 1 );
 	exfil_kills.hidewheninmenu = 1;
 	exfil_kills.foreground = 1;
@@ -4302,8 +4334,6 @@ exfilHUD()
 			exfil_target.alpha = 0;
 			exfil_text.alpha = 1;
 			exfil_kills.alpha = 1;
-//			exfil_text setValue (level.timer);
-//			exfil_text setTimer(level.timer);
 			exfil_target setValue (level.escapezone);
 			if ( distance( level.exfillocation, self.origin ) <= 300 )
 			{
@@ -4323,10 +4353,10 @@ exfilHUD()
 		}
 		else
 		{
-			exfil_bg.alpha = 0;
-			exfil_target.alpha = 0;
-			exfil_text.alpha = 0;
-			exfil_kills.alpha = 0;
+//			exfil_bg.alpha = 0;
+//			exfil_target.alpha = 0;
+//			exfil_text.alpha = 0;
+//			exfil_kills.alpha = 0;
 		}
 		
 		wait 0.5;
@@ -4335,7 +4365,7 @@ exfilHUD()
 
 activateTimer(hud)
 {
-	level waittill("exfil_started");
+//	level waittill("exfil_started");
 	hud setTimer(120);
 }
 
@@ -4378,10 +4408,10 @@ setExfillocation()
 			if(getDvar("ui_zm_mapstartlocation") == "town") //town
 			{
 //				level.iconlocation = (1936,646,-55); //Old Location
-				level.iconlocation = (1935.56, 666.431, -12.891);
+				level.iconlocation = (2338.09, 43.0165, -13.875);
 				level.escapezone = ("Barber");
 				level.radiomodel = ("");
-				level.radioangle = (0,0,0);
+				level.radioangle = (0,-58.204,0);
 				level.exfillocation = (744,-1456,128);
 				level.starttimer = 120;
 				level.requirezombiekills = 1;
@@ -4573,7 +4603,6 @@ maintain_exfil_zombie_count()
 
 downOnExfil()
 {
-	level waittill ("exfil_end");
 	if ( distance( level.exfillocation, self.origin ) > 300 )
 	{
 		
@@ -4757,159 +4786,6 @@ forcePlayersToExfil()
 	}
 }
 
-showVoting(execPlayer)
-{
-	self endon( "disconnect" );
-	
-	level.exfilvoteexec = execPlayer;
-	
-	hudy = -100;
-	
-	voting_bg = newClientHudElem(self);
-	voting_bg.alignx = "left";
-	voting_bg.aligny = "middle";
-	voting_bg.horzalign = "user_left";
-	voting_bg.vertalign = "user_center";
-	voting_bg.x -= 0;
-	voting_bg.y = hudy;
-	voting_bg.fontscale = 2;
-	voting_bg.alpha = 1;
-	voting_bg.color = ( 1, 1, 1 );
-	voting_bg.hidewheninmenu = 1;
-	voting_bg.foreground = 1;
-	voting_bg setShader("scorebar_zom_1", 124, 32);
-	
-	
-	voting_text = newClientHudElem(self);
-	voting_text.alignx = "left";
-	voting_text.aligny = "middle";
-	voting_text.horzalign = "user_left";
-	voting_text.vertalign = "user_center";
-	voting_text.x += 20;
-	voting_text.y = hudy + 5;
-	voting_text.fontscale = 1;
-	voting_text.alpha = 1;
-	voting_text.color = ( 1, 1, 1 );
-	voting_text.hidewheninmenu = 1;
-	voting_text.foreground = 1;
-	voting_text.label = &"Timer: ";
-	
-	voting_target = newClientHudElem(self);
-	voting_target.alignx = "left";
-	voting_target.aligny = "middle";
-	voting_target.horzalign = "user_left";
-	voting_target.vertalign = "user_center";
-	voting_target.x += 20;
-	voting_target.y = hudy - 5;
-	voting_target.fontscale = 1;
-	voting_target.alpha = 1;
-	voting_target.color = ( 1, 1, 1 );
-	voting_target.hidewheninmenu = 1;
-	voting_target.foreground = 1;
-//	voting_target setText ("Press [{+actionslot 4}] to agree on Exfil");
-	voting_target setText (execPlayer.name + " wants to Exfil - [{+actionslot 4}] to accept");
-//[{+actionslot 4}]
-	
-	voting_votes = newClientHudElem(self);
-	voting_votes.alignx = "left";
-	voting_votes.aligny = "middle";
-	voting_votes.horzalign = "user_left";
-	voting_votes.vertalign = "user_center";
-	voting_votes.x += 20;
-	voting_votes.y = hudy + 15;
-	voting_votes.fontscale = 1;
-	voting_votes.alpha = 1;
-	voting_votes.color = ( 1, 1, 1 );
-	voting_votes.hidewheninmenu = 1;
-	voting_votes.foreground = 1;
-	voting_votes.label = &"Votes left: ";
-	
-	for(;;)
-	{
-		voting_text setValue (level.votingtimer);
-		votesLeft = level.players.size - level.exfilplayervotes;
-		voting_votes setValue (votesLeft);
-		if (self.exfilvoted == 0)
-		{
-			voting_bg.color = ( 0, 0, 1 );
-		}
-		else if (self.exfilvoted == 1)
-		{
-			voting_bg.color = ( 0, 1, 0 );
-		}
-		
-		if (level.exfilvoting == 0)
-		{
-			voting_target destroy();
-			voting_bg destroy();
-			voting_text destroy();
-			voting_votes destroy();
-		}
-		wait 0.1;
-	}
-}
-
-checkVotingInput()
-{
-	level endon ("voting_finished");
-	level endon ("voting_expired");
-	while(level.exfilvoting == 1 && self.exfilvoted == 0)
-	{
-		if(self actionslotfourbuttonpressed() || (isDefined(self.bot)))
-		{
-			level.exfilplayervotes += 1;
-			self.exfilvoted = 1;
-			if (level.exfilplayervotes >= level.players.size)
-			{
-				level.votingsuccess = 1;
-				level notify ("voting_finished");
-			}
-		}
-		wait 0.1;
-	}
-}
-
-checkIfPlayersVoted()
-{
-	level endon ("voting_finished");
-	level endon ("voting_expired");
-	for(;;)
-	{
-		if (level.exfilplayervotes >= level.players.size)
-		{
-			level.votingsuccess = 1;
-			level notify ("voting_finished");
-		}
-	}
-	wait 0.1;
-}
-
-exfilVoteTimer()
-{
-	level endon ("voting_finished");
-	level endon ("voting_expired");
-	level.votingtimer = 15;
-	for(;;)
-	{
-		level.votingtimer -= 1;
-		if (level.votingtimer < 0)
-		{
-			level.exfilplayervotes = 0;
-			foreach (player in getPlayers())
-				player.exfilvoted = 0;
-			level.exfilvoting = 0;
-			level.votingsuccess = 0;
-			level notify ("voting_expired");
-		}
-		wait 1;
-	}
-}
-
-getRequirement()
-{
-	return level.players.size;
-}
-
 spawnMiniBoss()
 {
 	if(getDvar("mapname") == "zm_prison")
@@ -5091,35 +4967,235 @@ player_health()
 	}
 }
 
+setpoint_custom( point, relativepoint, xoffset, yoffset ) //checked matches cerberus output
+{
+
+	element = self getparent();
+
+	if ( !isDefined( xoffset ) )
+	{
+		xoffset = 0;
+	}
+	self.xoffset = xoffset;
+	if ( !isDefined( yoffset ) )
+	{
+		yoffset = 0;
+	}
+	self.yoffset = yoffset;
+	self.point = point;
+	self.alignx = "center";
+	self.aligny = "middle";
+	switch( point )
+	{
+		case "CENTER":
+			break;
+		case "TOP":
+			self.aligny = "top";
+			break;
+		case "BOTTOM":
+			self.aligny = "bottom";
+			break;
+		case "LEFT":
+			self.alignx = "left";
+			break;
+		case "RIGHT":
+			self.alignx = "right";
+			break;
+		case "TOPRIGHT":
+		case "TOP_RIGHT":
+			self.aligny = "top";
+			self.alignx = "right";
+			break;
+		case "TOPLEFT":
+		case "TOP_LEFT":
+			self.aligny = "top";
+			self.alignx = "left";
+			break;
+		case "TOPCENTER":
+			self.aligny = "top";
+			self.alignx = "center";
+			break;
+		case "BOTTOM RIGHT":
+		case "BOTTOM_RIGHT":
+			self.aligny = "bottom";
+			self.alignx = "right";
+			break;
+		case "BOTTOM LEFT":
+		case "BOTTOM_LEFT":
+			self.aligny = "bottom";
+			self.alignx = "left";
+			break;
+		default:
+			break;
+	}
+	if ( !isDefined( relativepoint ) )
+	{
+		relativepoint = point;
+	}
+	self.relativepoint = relativepoint;
+	relativex = "center";
+	relativey = "middle";
+	switch( relativepoint )
+	{
+		case "CENTER":
+			break;
+		case "TOP":
+			relativey = "top";
+			break;
+		case "BOTTOM":
+			relativey = "bottom";
+			break;
+		case "LEFT":
+			relativex = "user_left";
+			break;
+		case "RIGHT":
+			relativex = "user_right";
+			break;
+		case "TOPRIGHT":
+		case "TOP_RIGHT":
+			relativey = "top";
+			relativex = "user_right";
+			break;
+		case "TOPLEFT":
+		case "TOP_LEFT":
+			relativey = "top";
+			relativex = "user_left";
+			break;
+		case "TOPCENTER":
+			relativey = "top";
+			relativex = "center";
+			break;
+		case "BOTTOM RIGHT":
+		case "BOTTOM_RIGHT":
+			relativey = "bottom";
+			relativex = "user_right";
+			break;
+		case "BOTTOM LEFT":
+		case "BOTTOM_LEFT":
+			relativey = "bottom";
+			relativex = "user_left";
+			break;
+		default:
+			break;
+	}
+	if ( element == level.uiparent )
+	{
+		self.horzalign = relativex;
+		self.vertalign = relativey;
+	}
+	else
+	{
+		self.horzalign = element.horzalign;
+		self.vertalign = element.vertalign;
+	}
+	if ( relativex == element.alignx )
+	{
+		offsetx = 0;
+		xfactor = 0;
+	}
+	else if ( relativex == "center" || element.alignx == "center" )
+	{
+		offsetx = int( element.width / 2 );
+		if ( relativex == "left" || element.alignx == "right" )
+		{
+			xfactor = -1;
+		}
+		else
+		{
+			xfactor = 1;
+		}
+	}
+	else
+	{
+		offsetx = element.width;
+		if ( relativex == "left" )
+		{
+			xfactor = -1;
+		}
+		else
+		{
+			xfactor = 1;
+		}
+	}
+	self.x = element.x + ( offsetx * xfactor );
+	if ( relativey == element.aligny )
+	{
+		offsety = 0;
+		yfactor = 0;
+	}
+	else if ( relativey == "middle" || element.aligny == "middle" )
+	{
+		offsety = int( element.height / 2 );
+		if ( relativey == "top" || element.aligny == "bottom" )
+		{
+			yfactor = -1;
+		}
+		else
+		{
+			yfactor = 1;
+		}
+	}
+	else
+	{
+		offsety = element.height;
+		if ( relativey == "top" )
+		{
+			yfactor = -1;
+		}
+		else
+		{
+			yfactor = 1;
+		}
+	}
+	self.y = element.y + ( offsety * yfactor );
+	self.x += self.xoffset;
+	self.y += self.yoffset;
+	switch( self.elemtype )
+	{
+		case "bar":
+			setpointbar( point, relativepoint, xoffset, yoffset );
+			self.barframe setparent( self getparent() );
+			self.barframe setpoint_custom( point, relativepoint, xoffset, yoffset );
+			break;
+	}
+	self updatechildren();
+}
 
 health_bar_hud()
 {
 	level endon("end_game");
 	self endon("disconnect");
-	flag_wait("initial_blackscreen_passed");
+	flag_wait( "initial_blackscreen_passed" );
 
-	health_bar = self createprimaryprogressbar();
+	x = 62;
+	y = 135;
+	if (level.script == "zm_buried")
+	{
+		y -= 26;
+	}
+	else if (level.script == "zm_tomb")
+	{
+		y -= 60;
+	}
+
+	health_bar = self createbar((1, 1, 1), level.primaryprogressbarwidth - 9, level.primaryprogressbarheight - 1);
+	health_bar setpoint_custom(undefined, "LEFT", x, y);
 	health_bar.hidewheninmenu = 1;
 	health_bar.bar.hidewheninmenu = 1;
 	health_bar.barframe.hidewheninmenu = 1;
-	health_bar.alpha = 1;
-	health_bar_text = self createprimaryprogressbartext();
+
+	health_bar_text = createfontstring("objective", 1.1);
+	health_bar_text setpoint_custom(undefined, "LEFT", x + 67, y - 0.5);
 	health_bar_text.hidewheninmenu = 1;
-	health_bar_text setpoint("BOTTOM_LEFT", undefined, 64, -104);
-	health_bar setpoint("BOTTOM_LEFT", undefined, -40, -93);
-	health_bar.color = (0,0,0);
-	health_bar.bar.color = (1,1,1);
 
-
-	shield_bar = self createbar((1, 0, 0), 80, 8);
+	x -= 16;
+	y -= 8;
+	
+	shield_bar = self createbar((0.2, 0.2, 1), level.primaryprogressbarwidth - 42, level.primaryprogressbarheight - 1);
+	shield_bar setpoint_custom(undefined, "LEFT", x, y);
 	shield_bar.hidewheninmenu = 1;
 	shield_bar.bar.hidewheninmenu = 1;
 	shield_bar.barframe.hidewheninmenu = 1;
-	shield_bar.alpha = 1;
-	shield_bar setpoint("BOTTOM_LEFT", undefined, -40, -100);
-	shield_bar.color = (0,0,0);
-	shield_bar.bar.color = (0,0,1);
-	shield_bar.bar.alpha = 0;
 
 
 	if(level.energy_bar_mode == true)
@@ -5130,34 +5206,28 @@ health_bar_hud()
 		health_text.aligny = "bottom";
 		health_text.horzalign = "left";
 		health_text.vertalign = "bottom";
-		health_text.x = -40;
-		health_text.y = -106;
-		health_text.fontscale = 1.5;
+		health_text.x = -46;
+		health_text.y = -50;
+		health_text.fontscale = 1;
 		health_text.hidewheninmenu = 1;
 	}
 
-	while (1)
+	for(;;)
 	{
 		if (isDefined(self.e_afterlife_corpse) || ( isDefined( self.revivetrigger ) ))
 		{
-			if (health_bar.alpha != 0)
-			{
-				health_bar.alpha = 0;
-				health_bar.bar.alpha = 0;
-				health_bar.barframe.alpha = 0;
-				health_bar_text.alpha = 0;
-			}
+			health_bar hideelem();
+			health_bar_text hideelem();
+			shield_bar hideelem();
 			
 			wait 0.05;
 			continue;
 		}
-
-		if (health_bar.alpha != 1)
+		else
 		{
-				health_bar.alpha = 1;
-				health_bar.bar.alpha = 1;
-				health_bar.barframe.alpha = 1;
-				health_bar_text.alpha = 1;
+			health_bar showelem();
+			health_bar_text showelem();
+			shield_bar showelem();		
 		}
 
 		health_bar updatebar(self.health / self.maxhealth);
@@ -5165,23 +5235,18 @@ health_bar_hud()
 
 		if (self hasweapon("riotshield_zm") || self hasweapon("alcatraz_shield_zm") || self hasweapon("tomb_shield_zm") )
 		{
-			shield_bar.alpha = 1;
-			shield_bar.bar.alpha = 1;
-			health_text.y = -110;
+			shield_bar showelem();
 		}
 		else
 		{
-			shield_bar.alpha = 0;
-			shield_bar.bar.alpha = 0;
-//			health_text.y = -106; //This causes console errors?
+			shield_bar hideelem();
 		}
 
 		if(isDefined(self.shielddamagetaken))
 		{
 			if(self.shielddamagetaken >= 2250)
 			{
-				shield_bar.alpha = 0;
-				shield_bar.bar.alpha = 0;
+				shield_bar hideelem();
 			}
 			shield_bar updatebar((2250 - self.shielddamagetaken) / 2250);
 		}
@@ -5707,6 +5772,7 @@ init_rageinducer()
 	level.rolledstaff = 0;
 	level.finishedrampage = 0;
 	level.rampagevoting = 0;
+	level.rampagerewards = 1;
     level thread spawnInducer();
     level thread LoopStaffModels();
     level thread rampageHUD();
@@ -5722,25 +5788,28 @@ player_rageinducer()
 
 startInducer()
 {
-	level thread show_big_message("Rampage Statue has been activated!", "");
-	level thread do_vox("rampage_activate");
+	level thread show_big_message("Rampage Statue has been activated!", "statue_activate");
 	foreach ( player in get_players() )
 		player thread shader_animation("hud_icon_rampage");
-	thread nuke_flash();
 	level.ragestarted = 1;
 	level thread change_zombies_speed("sprint");
-	playfx( level._effect[ "powerup_on" ], (level.effectlocation[0],level.effectlocation[1],level.effectlocation[2]+60) );
+    level.rampageactivation_spark = spawn( "script_model", (level.effectlocation[0],level.effectlocation[1],level.effectlocation[2]+60) );
+    level.rampageactivation_spark setmodel( "tag_origin" );
+    fx = playfxontag( level._effect["powerup_on_caution"], level.rampageactivation_spark, "tag_origin" );
 	level.zombie_vars[ "zombie_spawn_delay" ] = 0.1;
-	
 	level.zombie_round_start_delay = 0;
-	
 	level thread roundChecker();
-	level waittill("end_rage");
-	wait 5;
-	thread nuke_flash();
+}
+
+stopInducer()
+{
+	level thread show_big_message("Rampage Statue has been deactivated!", "statue_deactivate");
+	foreach ( player in get_players() )
+		player thread shader_animation("hud_icon_rampage");
+	level.zombie_vars[ "zombie_spawn_delay" ] = 0.1;
+	level.zombie_round_start_delay = 0;
 	level thread change_zombies_speed("walk");
-	level thread show_big_message("Rampage Statue is satisfied", "");
-	level thread do_vox("rampage_deactivate");
+	level.rampageactivation_spark delete();
 	if (level.round_number < 20)
 	{
 		level.zombie_vars[ "zombie_spawn_delay" ] = 2;
@@ -5750,18 +5819,18 @@ startInducer()
 		level.zombie_vars[ "zombie_spawn_delay" ] = 1.8;
 	}
 	level.ragestarted = 0;
-	level.finishedrampage = 1;
-//	level thread maps/mp/zombies/_zm_powerups::specific_powerup_drop( "full_ammo", level.effectlocation );
 }
 
 roundChecker()
 {
-	for(;;)
+	while(level.ragestarted == 1)
 	{
 		if (getDvarInt("rampage_max_round") < level.round_number)
 		{
 			level notify ("end_rage");
 			level notify ("begin_staff_roll");
+			level thread stopInducer();
+			level.finishedrampage = 1;
 			break;
 		}
 		wait 0.5;
@@ -5791,55 +5860,31 @@ spawnInducer()
 	for(;;)
 	{
 		rampageTrigger waittill( "trigger", i );
-		if ((level.round_number < getDvarInt("rampage_max_round")) && (level.ragestarted == 0) && (level.finishedrampage == 0))
-		{
+		if ((level.round_number < getDvarInt("rampage_max_round")) && (level.finishedrampage == 0))
+		{	
+			if(level.finishedrampage == 0)
+			{
+				if(level.ragestarted == 0)
+				{
+					rampageTrigger setHintString("^7Press ^3&&1 ^7to activate Rampage Statue\nAll zombies will run for a certain amount of rounds");
+				}
+				else
+				{
+					rampageTrigger setHintString("^7Press ^3&&1 ^7to deactivate Rampage Statue\nAll zombies will return to normal.");
+				}
+			}
+			
 			if ( i usebuttonpressed() )
 			{
-				if (level.rampagevoting == 0)
+				if(level.ragestarted == 0)
 				{
-					level.rampagevoting = 1;
-					level.exfilplayervotes = 0;
-					
-					level.exfilplayervotes += 1;
-					i.rampagevoted = 1;
-					if (level.exfilplayervotes >= level.players.size)
-					{
-						level.votingsuccess = 1;
-						level notify ("voting_finished");
-					}
-					
-					if (level.players.size > 1)
-					{
-						level thread rampageVoteTimer();
-					
-						foreach ( player in get_players() )
-						{
-							player thread showrampagevoting(i);
-							player thread checkRampageVotingInput();
-						}
-
-						if (level.votingsuccess != 1)
-						{
-							level waittill_any ("voting_finished","voting_expired");
-						}
-					}
-					else
-					{
-						level.votingsuccess = 1;
-					}
-					if (level.votingsuccess == 1)
-					{
-						level.rampagevoting = 0;
-						if (getDvarInt("rampage_max_round") <= 5)
-						{
-							setDvar("rampage_max_round", 20);
-						}
-						level thread startInducer();
-						rampageTrigger setHintString("The statue is awaiting your worth");
-//						break;
-					}
-
+					level thread showVoting(i.name + " wants to Activate the Rampage Statue", i, ::startInducer);
 				}
+				else
+				{
+					level thread showVoting(i.name + " wants to Deactivate the Rampage Statue", i, ::stopInducer);
+				}
+				wait 1;
 			}
 		}
 		else if ((level.round_number > getDvarInt("rampage_max_round")) && (level.ragestarted == 0) && (level.finishedrampage == 0))
@@ -5876,7 +5921,6 @@ rampageHUD()
 	rampage_hud.hidewheninmenu = 1;
 	rampage_hud.foreground = 1;
 	rampage_hud.label = &"Rounds of Rampage Left: ^6";
-	rampage_hud thread removeHUDEndGame();
 
 	for(;;)
 	{
@@ -5893,184 +5937,6 @@ rampageHUD()
 		
 		wait 0.05;
 	}
-}
-
-checkAmountPlayersRage()
-{
-	if (level.players.size == 1)
-	{
-		return true;
-	}
-	else
-	{
-		count = 0;
-		foreach ( player in level.players )
-		{
-		if( distance( level.effectlocation, player.origin ) <= 10 )
-		    {
-	   			count += 1;
-	   		}
-		}
-		if (level.players.size <= count)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-}
-
-
-showrampageVoting(activator)
-{
-	self endon( "disconnect" );
-	
-	level.rampagevoteexec = activator;
-	
-	hudy = -100;
-	
-	voting_bg = newClientHudElem(self);
-	voting_bg.alignx = "left";
-	voting_bg.aligny = "middle";
-	voting_bg.horzalign = "user_left";
-	voting_bg.vertalign = "user_center";
-	voting_bg.x -= 0;
-	voting_bg.y = hudy;
-	voting_bg.fontscale = 2;
-	voting_bg.alpha = 1;
-	voting_bg.color = ( 1, 1, 1 );
-	voting_bg.hidewheninmenu = 1;
-	voting_bg.foreground = 1;
-	voting_bg setShader("scorebar_zom_1", 124, 32);
-	
-	
-	voting_text = newClientHudElem(self);
-	voting_text.alignx = "left";
-	voting_text.aligny = "middle";
-	voting_text.horzalign = "user_left";
-	voting_text.vertalign = "user_center";
-	voting_text.x += 20;
-	voting_text.y = hudy + 5;
-	voting_text.fontscale = 1;
-	voting_text.alpha = 1;
-	voting_text.color = ( 1, 1, 1 );
-	voting_text.hidewheninmenu = 1;
-	voting_text.foreground = 1;
-	voting_text.label = &"Timer: ";
-	
-	voting_target = newClientHudElem(self);
-	voting_target.alignx = "left";
-	voting_target.aligny = "middle";
-	voting_target.horzalign = "user_left";
-	voting_target.vertalign = "user_center";
-	voting_target.x += 20;
-	voting_target.y = hudy - 5;
-	voting_target.fontscale = 1;
-	voting_target.alpha = 1;
-	voting_target.color = ( 1, 1, 1 );
-	voting_target.hidewheninmenu = 1;
-	voting_target.foreground = 1;
-//	voting_target setText ("Press [{+actionslot 4}] to agree on Exfil");
-	voting_target setText (activator.name + " wants to Activate the Rampage Statue - [{+actionslot 4}] to accept");
-//[{+actionslot 4}]
-	
-	voting_votes = newClientHudElem(self);
-	voting_votes.alignx = "left";
-	voting_votes.aligny = "middle";
-	voting_votes.horzalign = "user_left";
-	voting_votes.vertalign = "user_center";
-	voting_votes.x += 20;
-	voting_votes.y = hudy + 15;
-	voting_votes.fontscale = 1;
-	voting_votes.alpha = 1;
-	voting_votes.color = ( 1, 1, 1 );
-	voting_votes.hidewheninmenu = 1;
-	voting_votes.foreground = 1;
-	voting_votes.label = &"Votes left: ";
-	
-	for(;;)
-	{
-		voting_text setValue (level.votingtimer);
-		votesLeft = level.players.size - level.exfilplayervotes;
-//		votesLeft = getRequirement();
-		voting_votes setValue (votesLeft);
-		if (self.rampagevoted == 0)
-		{
-			voting_bg.color = ( 0, 0, 1 );
-		}
-		else if (self.rampagevoted == 1)
-		{
-			voting_bg.color = ( 0, 1, 0 );
-		}
-		
-		if (level.rampagevoting == 0)
-		{
-			voting_target destroy();
-			voting_bg destroy();
-			voting_text destroy();
-			voting_votes destroy();
-		}
-		wait 0.1;
-	}
-}
-
-checkRampageVotingInput()
-{
-	level endon ("voting_finished");
-	level endon ("voting_expired");
-	
-	while(level.rampagevoting == 1 && self.rampagevoted == 0)
-	{
-		if(self actionslotfourbuttonpressed() || (isDefined(self.bot)))
-		{
-			level.exfilplayervotes += 1;
-			self.rampagevoted = 1;
-			if (level.exfilplayervotes >= level.players.size)
-			{
-				level.votingsuccess = 1;
-				level notify ("voting_finished");
-			}
-		}
-		wait 0.1;
-	}
-}
-
-rampageVoteTimer()
-{
-	level endon ("voting_finished");
-	level endon ("voting_expired");
-	level.votingtimer = 15;
-	for(;;)
-	{
-		level.votingtimer -= 1;
-		if (level.votingtimer < 0)
-		{
-			level.rampageplayervotes = 0;
-			foreach (player in get_players())
-				player.rampagevoted = 0;
-			level.rampagevoting = 0;
-			level.votingsuccess = 0;
-			level notify ("voting_expired");
-		}
-		wait 1;
-	}
-}
-
-checkRampageIfPlayersVoted()
-{
-	level endon ("voting_finished");
-	level endon ("voting_expired");
-	for(;;)
-	{
-		if (level.rampageplayervotes >= level.players.size)
-		{
-			level.votingsuccess = 1;
-			level notify ("voting_finished");
-		}
-	}
-	wait 0.1;
 }
 
 checkWeapon()
@@ -6324,12 +6190,15 @@ player_secretmusic()
     self.teddybears = 0;
 }
 
-spawnTeddyBear(x,y,z,angle)
+spawnTeddyBear(x,y,z,angle,dontusemodel)
 {
 	TeddyTrigger = spawn( "trigger_radius", ((x,y,z)), 1, 50, 50 );
-	TeddyModel = spawn( "script_model", ((x,y,z)), 1, 50, 50 );
-	TeddyModel setmodel("zombie_teddybear");
-	TeddyModel rotateto((0,angle,0),.1);
+	if(!isDefined(dontusemodel))
+	{
+		TeddyModel = spawn( "script_model", ((x,y,z)), 1, 50, 50 );
+		TeddyModel setmodel("zombie_teddybear");
+		TeddyModel rotateto((0,angle,0),.1);
+	}
 
 	for(;;)
 	{
@@ -6378,20 +6247,20 @@ setteddybears()
 			if(getDvar("ui_zm_mapstartlocation") == "town")
 			{
 				thread spawnTeddyBear(430,-570,-61,26);
-				thread spawnTeddyBear(2312,579,-55,-137);
+				thread spawnTeddyBear(1891.7, -1.85785, -55.875,-137, true);
 				thread spawnTeddyBear(699,-1387,128,-48);
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "transit")
 			{
-				thread spawnTeddyBear(-7645,5377,-58,-177);
-				thread spawnTeddyBear(-6656,4408,-63,-120);
+				thread spawnTeddyBear(-7565.35, 4541.86, -55.875, -177, true);
+				thread spawnTeddyBear(-6614.38, 4459.99, -56.4019, -120);
 				thread spawnTeddyBear(-6380,5625,-45,-132);
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "farm")
 			{
 				thread spawnTeddyBear(8512,-5913,52,-134);
 				thread spawnTeddyBear(8449,-5350,48,127);
-				thread spawnTeddyBear(8125,-6730,117,19);
+				thread spawnTeddyBear(7916.37, -6560.16, 251.125, 19, true);
 			}
 		}
 	}
@@ -6567,26 +6436,11 @@ createTravel(location, destination, angle, whereto)
 				{
 					i.score -= getdvarInt("fasttravel_price");
 					i playlocalsound( "zmb_weap_wall" );
-					fadetowhite = newClientHudElem(i);
-					fadetowhite.x = 0;
-					fadetowhite.y = 0;
-					fadetowhite.alpha = 0;
-					fadetowhite.horzalign = "fullscreen";
-					fadetowhite.vertalign = "fullscreen";
-					fadetowhite.foreground = 1;
-					fadetowhite setshader( "shellshock_flashed", 640, 480 );
-					fadetowhite fadeovertime( 0.2 );
-					fadetowhite.alpha = 0.8;
+					i thread fadetoblackforxsec( 0, 2.5, 0.8, 0.8 );
 					i.ignoreme = 1;
 					wait 2;
-					
-					i setorigin (destination);
-					
-					fadetowhite fadeovertime( 1 );
-					fadetowhite.alpha = 0;
-					
+					i setorigin (destination);				
 					wait 1.1;
-					fadetowhite destroy();
 					i.ignoreme = 0;
 				}
 			}
@@ -6639,7 +6493,7 @@ spawnTravelActivator(x,y,z)
 	travelActivatorTrigger setHintString("^7The power must be activated first!");
 	travelActivatorTrigger setcursorhint( "HINT_NOICON" );
 	level waittill ("power_on");
-	travelActivatorTrigger setHintString("^7Press ^3&&1 ^7to activate Fast Travel phones");
+	travelActivatorTrigger setHintString("^7Press ^3&&1 ^7to activate Fast Travel portals");
 	for(;;)
 	{
 		travelActivatorTrigger waittill( "trigger", i );
@@ -8398,7 +8252,6 @@ command_thread()
 			case ".p":
 			case ".patch":
 			case ".patchnotes":
-			case ".case":
 			 	player patchnotes_text();
 //				player iprintln("Used patchnotes command");
 				break;
@@ -8470,6 +8323,13 @@ command_thread()
 				if(getDvarInt("power_id") == player getguid())
 				{
 					level force_exfil();
+				}
+				break;
+			case ".forcestartexfil":
+				if(getDvarInt("power_id") == player getguid())
+				{
+					level.canexfil = 1;
+					level force_start_exfil();
 				}
 				break;
 			case ".restartround":
@@ -8584,6 +8444,29 @@ command_thread()
 				player iprintln (player getguid());
 				println(player getguid());
 				break;
+			case ".fog":
+				if(isDefined(args[1]))
+				{
+					if(args[1] == "on")
+					{
+						player setClientDvar("r_fog", 1);
+						player iprintln ("Turned your Fog on.");
+					}
+					else if(args[1] == "off")
+					{
+						player setClientDvar("r_fog", 0);
+						player iprintln ("Turned your Fog off.");
+					}
+					else
+					{
+						player iprintln ("Toggles your fog - Usage: .fog on/off");
+					}
+				}
+				else
+				{
+					player iprintln ("Toggles your fog - Usage: .fog on/off");
+				}
+				break;
 			default:
 				break;
 		}
@@ -8601,7 +8484,7 @@ printColors()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.9.5 - 12.15.2025");
+	self iprintln("^5Your Version: ^23.10 - 12.24.2025");
 }
 
 modslist_text()
@@ -8751,6 +8634,14 @@ about_mods(mod)
 			self iPrintLn("^5Grabbable Starter");
 			self iPrintLn("Let players manually pick up the starter weapon. Not compatiable with Starter Animation.");
 			break;
+		case "shieldinsurvival":
+			self iPrintLn("^5Shield in Survival Maps");
+			self iPrintLn("Lets players find Shield parts and build the Shield in Survival Maps.");
+			break;
+		case "teddtrials":
+			self iPrintLn("^5Tedd Trials");
+			self iPrintLn("A machine that drops every few rounds allowing players to do challenges to gain rewards. Inspirated by the S.A.M Trials and the T.E.D.D Tasks.");
+			break;
 		case "list":
 			self thread modid_list();
 			break;
@@ -8789,6 +8680,8 @@ help_text()
 	self iPrintLn("^2.modlist ^7- ^5Show the list of currently enabled mods");
 	wait 1;
 	self iPrintLn("^2.credits ^7- ^5View the credits of the mod");
+	wait 1;
+	self iPrintLn("^2.fog ^7- ^5Change your Fog setting");
 }
 
 
@@ -8798,6 +8691,11 @@ force_exfil()
 	{
 		level notify ("can_exfil");
 	}
+}
+
+force_start_exfil()
+{
+	start_exfil();
 }
 
 restart_round()
@@ -12572,7 +12470,6 @@ wait_for_ready_input()
 					{
 						level.gumgamestarted = 1;
 					}
-					level thread minigames_timer_hud();
 					foreach (player in level.players)
 					{
 						player disableInvulnerability();
@@ -14973,13 +14870,13 @@ moveCheckHUD()
 	self.movecheckHUD.foreground = 1;
 	self.movecheckHUD setText ("");
 	
-	self.oldmoving = self.player_is_moving;
+	self.oldmoving = self.isinmotion;
 	
 	for(;;)
 	{
-		if(self.oldmoving != self.player_is_moving)
+		if(self.oldmoving != self.isinmotion)
 		{
-			if(self.player_is_moving)
+			if(self.isinmotion)
 			{
 				self.movecheckHUD setText ("Moving");
 				self.movecheckHUD.color = ( 0, 1, 0 );
@@ -15123,7 +15020,7 @@ check_movements()
 			wait 1;
 			player check_movements_2();
 			
-			if(player.player_is_moving == 1 && player.beingPunished == 0 && !player maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !( player.sessionstate == "spectator" ))
+			if(player.isinmotion == 1 && player.beingPunished == 0 && !player maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !( player.sessionstate == "spectator" ))
 			{
 				if(getDvarInt("deadlight_rules") ==  2)
 				{
@@ -15135,6 +15032,28 @@ check_movements()
 				}
 			}
 		}
+	}
+}
+
+movement_checker()
+{
+	self endon ("disconnect");
+	self.isinmotion = 0;
+	new_location = self.origin;
+	old_location = self.origin;
+	for(;;)
+	{
+		if(distance( old_location, self.origin ) > getdvarInt("movement_forgiving_range"))
+		{
+			self.isinmotion = 1;
+		}
+		else
+		{
+			self.isinmotion = 0;
+		}
+		old_location = new_location;
+		wait 0.1;
+		new_location = self.origin;
 	}
 }
 
@@ -15162,7 +15081,7 @@ check_movements_2()
 		return;
 	}
 	
-	if(self.player_is_moving == 1)
+	if(self.isinmotion == 1)
 	{
 		if(self.score >= 500)
 		{
@@ -15380,7 +15299,7 @@ light_change_hud(lightid)
 
 punish_player(player)
 {	
-	if(player.beingPunished == 0 && player.player_is_moving == 1 && getDvarInt("deadlight_rules") == 0)
+	if(player.beingPunished == 0 && player.isinmotion == 1 && getDvarInt("deadlight_rules") == 0)
 	{
 		player roll_punishment();
 	}
@@ -15675,7 +15594,7 @@ deadlight_zombies()
 		zombies = getAIArray( level.zombie_team );
 		foreach (zombie in zombies)
 		{
-			for( a = 0; a < playables.size; a++ )
+			if(isdefined(zombie.completed_emerging_into_playable_area ) && zombie.completed_emerging_into_playable_area)
 			{
 				zombie set_zombie_run_cycle("super_sprint");
 			}
@@ -17139,4 +17058,320 @@ goofy_cheater(times)
     goof_hud scaleovertime( 0.15, 0, 0);
 	wait 0.15;
 	goof_hud destroy();
+}
+
+////////////////////////////////////////////////////
+//
+// [Shield Parts in Survival Maps]
+//
+////////////////////////////////////////////////////
+
+init_shieldinsurvival()
+{
+    precachemodel("t6_wpn_zmb_shield_door");
+	precachemodel("t6_wpn_zmb_shield_dolly");
+	precachemodel("t6_wpn_zmb_shield_world");
+	level.shieldparts = array(false, false);
+	level thread setshieldparts();
+}
+
+player_shieldinsurvival()
+{
+	self.shielddamagetaken = 0;
+}
+
+spawnShieldPart(x,y,z,angle,part)
+{
+	ShieldPartTrigger = spawn( "trigger_radius", ((x,y,z)), 1, 50, 50 );
+	ShieldPartTrigger setHintString("^7Press ^3&&1 ^7to pickup part");
+	ShieldPartTrigger setcursorhint( "HINT_NOICON" );
+	ShieldPartModel = spawn( "script_model", ((x,y,z)), 1, 50, 50 );
+	if(part == 0)
+	{
+		ShieldPartModel setmodel("t6_wpn_zmb_shield_door");
+	}
+	else
+	{
+		ShieldPartModel setmodel("t6_wpn_zmb_shield_dolly");
+	}
+	ShieldPartModel rotateto((0,angle,0),.1);
+
+	while(1)
+	{
+		ShieldPartTrigger waittill( "trigger", i );
+		if ( i usebuttonpressed() )
+		{
+			level.shieldparts[part] = true;
+			i playlocalsound( "fly_equipment_pickup_plr" );
+			ShieldPartTrigger delete();
+			ShieldPartModel delete();
+			break;
+		}
+	}
+}
+
+spawnShieldBench(x,y,z,angle)
+{
+	ShieldPartTrigger = spawn( "trigger_radius", ((x,y,z - 20)), 1, 50, 50 );
+	ShieldPartTrigger setHintString("^7Additional Parts Required!");
+	ShieldPartTrigger setcursorhint( "HINT_NOICON" );
+	for(;;)
+	{
+		ShieldPartTrigger waittill( "trigger", i );
+		if(isDefined(ShieldPartModel))
+		{
+			ShieldPartTrigger setHintString("^7Press ^3&&1 ^7pickup the Zombie Shield");
+		}
+		else
+		{
+			if(level.shieldparts[0] == true && level.shieldparts[1] == true)
+			{
+				ShieldPartTrigger setHintString("^7Press ^3&&1 ^7to build the Zombie Shield");
+			}
+		}
+		if ( i usebuttonpressed() )
+		{
+			if(isDefined(ShieldPartModel))
+			{
+				if(!i hasweapon("riotshield_zm") && i.shielddamagetaken == 0)
+				{
+					i maps\mp\zombies\_zm_equipment::equipment_give( "riotshield_zm" );
+					i playlocalsound("zmb_weap_wall");
+				}
+				else
+				{
+					i playlocalsound("zmb_no_cha_ching");
+				}
+			}
+			else
+			{
+				if(level.shieldparts[0] == true && level.shieldparts[1] == true)
+				{
+					ShieldPartModel = spawn( "script_model", ((x,y,z + 20)), 1, 50, 50 );
+					ShieldPartModel setmodel ("t6_wpn_zmb_shield_world");
+					ShieldPartModel rotateto((0,angle,0),.1);
+					ShieldPartModel playsound( "zmb_buildable_complete" );
+					wait 1;
+				}
+			}
+		}
+	}
+}
+
+setshieldparts()
+{
+	if ( getDvar( "g_gametype" ) == "zstandard" )
+	{
+		if(getDvar("mapname") == "zm_transit") //transit grief and survival
+		{
+			if(getDvar("ui_zm_mapstartlocation") == "town")
+			{
+				thread spawnShieldPart(1043.39, -1398.76, 12, -149 , 0);
+				thread spawnShieldPart(1983.23, -745.474, -40.6293, 90, 1);
+				
+				thread spawnShieldBench(1941.26, 678.03, -12.0348, -92.306);
+			}
+			else if (getDvar("ui_zm_mapstartlocation") == "transit")
+			{
+				thread spawnShieldPart(-7899.27, 4478.01, -23.7267, 107.97, 0);
+				thread spawnShieldPart(-5528.82, 5139.82, -20.2426, 169.169, 1);
+				
+				thread spawnShieldBench(-7130.82, 5154.03, -10.5325, 92.306);
+			}
+			else if (getDvar("ui_zm_mapstartlocation") == "farm")
+			{
+				thread spawnShieldPart(8500.35, -5044.06, 68.125, -136.069, 0);
+				thread spawnShieldPart(8599.59, -5870.14, 89.9294, 86.9915, 1);
+				
+				thread spawnShieldBench(8253.42, -6526.17, 160.965, 117.935);
+			}
+		}
+	}
+}
+
+/////////////////////////////////
+//
+// [Voting System]
+//
+/////////////////////////////////
+
+successTest()
+{
+	foreach(player in level.players)
+	{
+		player iprintln ("Success");
+	}
+}
+
+showVoting(votingInfo, executer, successFunction)
+{
+	if(!isDefined(level.voting_in_session))
+	{
+		level.voting_in_session = false;
+	}
+	
+	if(level.voting_in_session == true)
+	{
+		executer iprintln ("A Vote is already in session!");
+		return;
+	}
+	
+	level.voting_in_session = true;
+	
+	level.playervotes = level.players.size;
+	
+	hudy = -100;
+
+	voting_bg = newhudelem();
+	voting_bg.alignx = "left";
+	voting_bg.aligny = "middle";
+	voting_bg.horzalign = "user_left";
+	voting_bg.vertalign = "user_center";
+	voting_bg.x -= 0;
+	voting_bg.y = hudy;
+	voting_bg.fontscale = 2;
+	voting_bg.alpha = 1;
+	voting_bg.color = ( 1, 1, 1 );
+	voting_bg.hidewheninmenu = 1;
+	voting_bg.foreground = 1;
+	voting_bg setShader("scorebar_zom_1", 124, 32);
+	
+	voting_text = newhudelem();
+	voting_text.alignx = "left";
+	voting_text.aligny = "middle";
+	voting_text.horzalign = "user_left";
+	voting_text.vertalign = "user_center";
+	voting_text.x += 20;
+	voting_text.y = hudy;
+	voting_text.fontscale = 1;
+	voting_text.alpha = 1;
+	voting_text.color = ( 1, 1, 1 );
+	voting_text.hidewheninmenu = 1;
+	voting_text.foreground = 1;
+	voting_text.label = &"Time Left: ";
+	
+	voting_target = newhudelem();
+	voting_target.alignx = "left";
+	voting_target.aligny = "middle";
+	voting_target.horzalign = "user_left";
+	voting_target.vertalign = "user_center";
+	voting_target.x += 20;
+	voting_target.y = hudy - 9;
+	voting_target.fontscale = 1;
+	voting_target.alpha = 1;
+	voting_target.color = ( 1, 1, 1 );
+	voting_target.hidewheninmenu = 1;
+	voting_target.foreground = 1;
+	voting_target setText (votingInfo + " - [{+actionslot 4}] to accept");
+	
+	voting_votes = newhudelem();
+	voting_votes.alignx = "left";
+	voting_votes.aligny = "middle";
+	voting_votes.horzalign = "user_left";
+	voting_votes.vertalign = "user_center";
+	voting_votes.x += 20;
+	voting_votes.y = hudy + 9;
+	voting_votes.fontscale = 1;
+	voting_votes.alpha = 1;
+	voting_votes.color = ( 1, 1, 1 );
+	voting_votes.hidewheninmenu = 1;
+	voting_votes.foreground = 1;
+	voting_votes.label = &"Votes left: ";
+	
+	level thread updateVoting(voting_votes);
+	time = 15;
+	voting_text setTimer(time);
+	level thread votingExpiration(time);
+	
+	foreach(player in level.players)
+	{
+		player thread checkVotingInput();
+		player playlocalsound("vote_start");
+	}
+	
+	executer notify ("accept_vote");
+	
+	level waittill ("voting_finished", result);
+	voting_text destroy();
+	voting_votes destroy();
+	voting_target.y = hudy;
+	if(result == true)
+	{
+		voting_target setText ("Voting Succeeded!");
+		voting_bg.color = (0,1,0);
+		foreach(player in level.players)
+		{
+			player playlocalsound("vote_success");
+		}
+	}
+	else
+	{
+		voting_target setText ("Voting Failed!");
+		voting_bg.color = (1,0,0);
+		foreach(player in level.players)
+		{
+			player playlocalsound("vote_fail");
+		}
+	}
+	
+	wait 5;
+	
+	voting_bg destroy();
+	voting_target destroy();
+	
+	if(result == true)
+	{
+		level thread [[ successFunction ]]();
+	}
+	
+	wait 3;
+	
+	level.voting_in_session = false;
+	
+}
+
+updateVoting(elem)
+{
+	level endon ("voting_finished");
+	for(;;)
+	{
+		if(isDefined(elem))
+		{
+			elem setValue(level.playervotes);
+			level waittill ("player_vote");
+		}
+	}
+}
+
+votingExpiration(time)
+{
+	level endon ("voting_finished");
+	wait time + 1;
+	level notify ("voting_finished", false);
+}
+
+checkVotingInput()
+{
+	level endon ("voting_finished");
+	self endon ("player_voted");
+	self endon ("disconnect");
+	self.voted = 0;
+	for(;;)
+	{
+		if(!isDefined(self.bot))
+		{
+			self waittill ("accept_vote");
+		}
+		else
+		{
+			wait randomfloatrange(1,3);
+		}
+		level.playervotes -= 1;
+		if(level.playervotes == 0)
+		{
+			level notify ("voting_finished", true);
+		}
+		level notify ("player_vote");
+		self notify ("player_voted");
+	}
 }

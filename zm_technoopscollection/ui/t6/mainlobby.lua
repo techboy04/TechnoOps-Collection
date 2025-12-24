@@ -691,7 +691,7 @@ CoD.MainLobby.ButtonPromptJoin = function (MainLobbyWidget, ClientInstance)
 end
 
 LUI.createMenu.MainLobby = function (LocalClientIndex)
-	local MainLobbyName = Engine.Localize(CoD.MPZM("MENU_MULTIPLAYER_CAPS", "TECHNOOPS COLLECTION v3.9.5"))
+	local MainLobbyName = Engine.Localize(CoD.MPZM("MENU_MULTIPLAYER_CAPS", "TECHNOOPS COLLECTION v3.10"))
 	local MainLobbyWidget = CoD.Lobby.New("MainLobby", LocalClientIndex, nil, MainLobbyName)
 	MainLobbyWidget.controller = LocalClientIndex
 	MainLobbyWidget.anyControllerAllowed = true

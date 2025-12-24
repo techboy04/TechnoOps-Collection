@@ -925,8 +925,6 @@ player_lava_damage( trig )
 
 player_can_burn()
 {
-	return true;
-	
 	if(getDvarInt("enable_lavadamage") == 0)
 	{
 		return false;
@@ -939,9 +937,9 @@ player_can_burn()
 	{
 		if(!self hasperk ("specialty_divetonuke_zombies"))
 		{
-			return false;
+			return true;
 		}
-		return true;
+		return false;
 	}
 	else
 	{

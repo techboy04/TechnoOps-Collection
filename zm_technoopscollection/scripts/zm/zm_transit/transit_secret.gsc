@@ -3215,52 +3215,43 @@ loop_bossStartFX(origin)
 
 spawnBossStart()
 {
-	bossStartTrigger = spawn( "trigger_radius", ((1765.37, -88.9562, -33.9563)), 1, 50, 50 );
-	bossStartTrigger setHintString("Press ^3&&1 ^7to investigate the disturbance \n[Final Encounter] All Players need to be nearby.");
-	bossStartTrigger setcursorhint( "HINT_NOICON" );
-	bossStartModel = spawn( "script_model", ((1765.37, -88.9562, -33.9563)));
-	bossStartModel setmodel ("p6_zm_bu_sq_crystal");
+	level.bossStartTrigger = spawn( "trigger_radius", ((1765.37, -88.9562, -33.9563)), 1, 50, 50 );
+	level.bossStartTrigger setHintString("Press ^3&&1 ^7to investigate the disturbance \n[Final Encounter] A vote will be casted.");
+	level.bossStartTrigger setcursorhint( "HINT_NOICON" );
+	level.bossStartModel = spawn( "script_model", ((1765.37, -88.9562, -33.9563)));
+	level.bossStartModel setmodel ("p6_zm_bu_sq_crystal");
 	angle = randomintrange(0,180);
-	bossStartModel rotateTo((0,167.966,0),.1);
+	level.bossStartModel rotateTo((0,167.966,0),.1);
 	
-	bossStartTrigger thread loop_bossStartFX();
+	level.bossStartTrigger thread loop_bossStartFX();
 
-	bossStartModel thread loop_boss_model();
+	level.bossStartModel thread loop_boss_model();
 
 	for(;;)
 	{
-		bossStartTrigger waittill( "trigger", i );
+		level.bossStartTrigger waittill( "trigger", i );
 			
 		if ( i usebuttonpressed() )
 		{
-			if(players_are_near(bossStartTrigger.origin, 100))
-			{
-				bossStartModel thread electricity_towards_boss((1443,-520,55));
-				bossStartModel moveto((1443,-520,55),8);
-				bossStartModel waittill("movedone");
-				level.bossstarted = 1;
-				level thread force_spawn_boss((1443,-520,55));
-				thread nuke_flash(3);
-				earthquake( 1, 2, (1443,-520,55), 1000 );
-				level notify ("stop_boss_sequence");
-				thread give_bots_special_weapons();
-				bossStartTrigger delete();
-				bossStartModel delete();
-			}
-			else
-			{
-				if(getDvarInt("enable_toasts") == 1)
-				{
-					send_toast(i.name + " wants to initiate the Final Encounter", "objective_marker");
-				}
-				else
-				{
-					notify_player_action(i.name + " wants to initiate the final encounter!");
-				}
-			}
+			showVoting(i.name + " wants to start the Final Encounter", i, ::startFinalEncounter);
 		}
 		wait 0.1;
 	}
+}
+
+startFinalEncounter()
+{
+	level.bossStartModel thread electricity_towards_boss((1443,-520,55));
+	level.bossStartModel moveto((1443,-520,55),8);
+	level.bossStartModel waittill("movedone");
+	level.bossstarted = 1;
+	level thread force_spawn_boss((1443,-520,55));
+	thread nuke_flash(3);
+	earthquake( 1, 2, (1443,-520,55), 1000 );
+	level notify ("stop_boss_sequence");
+	thread give_bots_special_weapons();
+	level.bossStartTrigger delete();
+	level.bossStartModel delete();
 }
 
 electricity_towards_boss(origin)
