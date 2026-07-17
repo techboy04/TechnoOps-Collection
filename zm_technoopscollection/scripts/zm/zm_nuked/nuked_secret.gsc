@@ -52,7 +52,7 @@ init()
 		level thread GuidedModeChecks();
 	}
 	
-	custom_secret_song_spawns(array((638.568, 629.444, -20.5512),(-1037.25, 13.6642, -62.3842),(901.645, 461.189, -19.5676)),array(-89.5405,156.158,16.9171),"mus_custom_nuketown_ee");
+	custom_secret_song_spawns(array((638.568, 629.444, -20.5512),(-1037.25, 13.6642, -62.3842),(901.645, 461.189, -19.5676)),array(-89.5405,156.158,16.9171),"mus_custom_nuketown_ee", undefined, 280);
 }
 
 spawnBunker()

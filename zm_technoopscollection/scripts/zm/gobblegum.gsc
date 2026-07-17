@@ -16,6 +16,7 @@
 #include maps\mp\animscripts\zm_shared;
 #include maps\mp\zombies\_zm_spawner;
 #include maps\mp\zombies\_zm_ai_basic;
+#include scripts\zm\main;
 
 main()
 {
@@ -92,7 +93,7 @@ init()
 
 	if(level.script == "zm_transit")
 	{
-		level thread spawnGumballMachine((-7060.83, 4147.14, -63.7768), 90); //Bus Depot
+		level thread spawnGumballMachine((-7110.98, 4320.11, -63.875), 90); //Bus Depot
 		level thread spawnGumballMachine((-5424.36, -7775.02, -63.2332), 0); //Diner
 		level thread spawnGumballMachine((7764.63, -6324.16, 117.125), 30); //Farm
 		level thread spawnGumballmachine((10957.6, 8058.04, -561.764), -180); //Power Station
@@ -207,6 +208,7 @@ gobblegum_hud()
     self.gobbleHUDText.fontscale = 1.5;
 	self.gobbleHUDText.x = -150;
     self.gobbleHUDText.y = 20;
+	self.gobbleHUDText thread removeHUDEndGame(self);
 	
 	self.gobbleHUDImage = newClientHudElem(self);
 	self.gobbleHUDImage.alignx = "center";
@@ -217,6 +219,7 @@ gobblegum_hud()
 	self.gobbleHUDImage.x = self.gobbleHUDText.x;
     self.gobbleHUDImage.y = self.gobbleHUDText.y - 16;
 	self.gobbleHUDImage setShader ("", 32, 32);
+	self.gobbleHUDImage thread removeHUDEndGame(self);
 	
 	while(1)
 	{

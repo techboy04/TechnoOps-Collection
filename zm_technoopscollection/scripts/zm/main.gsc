@@ -32,6 +32,9 @@
 
 main()
 {
+    level._effect["player_rain"] = loadfx( "maps/zombie_tomb/fx_tomb_player_weather_rain" );
+    level._effect["player_snow"] = loadfx( "maps/zombie_tomb/fx_tomb_player_weather_snow" );
+	
 	replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::wait_network_frame);
 
 	create_dvar("gamemode", 0);
@@ -106,7 +109,7 @@ main()
 
 	replacefunc(maps\mp\zombies\_zm::check_quickrevive_for_hotjoin, ::check_quickrevive_for_hotjoin);
 
-	if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 8)
+	if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9)
 	{
 		replacefunc(maps\mp\zombies\_zm::round_think, ::new_round_think);
 		replacefunc(maps\mp\zombies\_zm::round_over, ::new_round_over);	
@@ -191,7 +194,7 @@ main()
 
 wait_network_frame()
 {
-	wait 0.01;
+	wait 0.05;
 }
 
 
@@ -224,6 +227,7 @@ init()
     
     level.modlist = [];
     level.modids = [];
+	level.gamemodestarted = 0;
 
 	if( getDvarInt("gamemode") != 0)
 	{
@@ -242,7 +246,7 @@ init()
 			for( i = 0; i < 8; i++ )
 			{
 				thread playerScoresHUD(i, level.players[i]);
-				wait 0.01;
+				wait 0.05;
 			}
 			level thread introHUD();
 			
@@ -306,6 +310,11 @@ init()
 			level thread gumgame_round_loop();
 			level thread introHUD();
 		}
+		else if(getDvarInt("gamemode") == 9)
+		{
+			level.gamemodestarted = 0;
+			level thread introHUD();
+		}
 		if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 		{
 			level thread nextroundtimer();
@@ -320,7 +329,7 @@ init()
 		}
 	}
 
-    if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
+    if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9))
     {
     	init_rageinducer();
     	level.modlist[level.modlist.size] = "Rampage Statue";
@@ -383,14 +392,14 @@ init()
     	level.modids[level.modids.size] = "transitpower";
     }
     	
-    if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
+    if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8  || getDvarInt("gamemode") == 9))
     {
 		init_exfil();
     	level.modlist[level.modlist.size] = "Exfil";
     	level.modids[level.modids.size] = "exfil";
     }
     
-    if (getDvarInt("enable_fasttravel") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
+    if (getDvarInt("enable_fasttravel") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9))
     {
     	init_fasttravel();
     	level.modlist[level.modlist.size] = "Fast Travel";
@@ -437,7 +446,7 @@ init()
     	level.modids[level.modids.size] = "shieldinsurvival";
 	}
     	
-    if (getDvarInt("enable_instantpap") == 1 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
+    if (getDvarInt("enable_instantpap") == 1 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 9)
     {
     	init_instantpap();
     	level.modlist[level.modlist.size] = "Instant PAP";
@@ -451,7 +460,7 @@ init()
     	level.modids[level.modids.size] = "globalatm";
     }
 
-    if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
+    if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9))
     {
     	init_enemycounter();
     	level.modlist[level.modlist.size] = "Enemy Counter";
@@ -572,7 +581,7 @@ init()
 	
 	level.bonus_points_powerup_override = ::bonus_points_powerup_override;
 	
-    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8)
+    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9)
 	{
 		include_powerup( "bonus_points_team" );
 		add_zombie_powerup( "bonus_points_team", "zombie_z_money_icon", &"ZOMBIE_POWERUP_BONUS_POINTS", ::func_should_always_drop, 0, 0, 0 );
@@ -649,7 +658,7 @@ check_quickrevive_for_hotjoin( disconnecting_player )
 
 bonus_points_powerup_override()
 {
-    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8)
+    if(getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9)
 	{
 		foreach (player in level.players)
 		{
@@ -781,12 +790,15 @@ onPlayerSpawned()
 	level endon("game_ended");
 	
 	thread init_player_things();
+	self.playedminigamehudmsg = 0;
 
     for(;;)
     {
         self waittill("spawned_player");
+		flag_wait("initial_blackscreen_passed");
         self endon("disconnect");
         
+		self disableInvulnerability();
         if(getDvarInt("gamemode") == 0)
 		{
 			giveStarterWeapons();
@@ -796,9 +808,10 @@ onPlayerSpawned()
 			self.lives = 999;
 			self.timerpaused = 0;
 
-			if (level.gungamestarted == 0 || level.crankedstarted == 0 || level.mysterygunsstarted == 0 || level.redgreenlightstarted == 0 || level.zombiesnacksstarted == 0 || level.gumgamestarted == 0)
+			if(level.gamemodestarted == 0)
 			{
 				self EnableInvulnerability();
+				self thread startHUDMessage(1);
 				self thread wait_for_ready_input();
 				level waittill ("end");
 				self disableInvulnerability();
@@ -809,7 +822,7 @@ onPlayerSpawned()
 				if(self.playedminigamehudmsg == 0)
 				{
 					self.playedminigamehudmsg = 1;
-					self thread startHUDMessage();
+					self thread startHUDMessage(0);
 				}
 			}
 			if (getDvarInt("gamemode") == 1)
@@ -852,76 +865,46 @@ init_dvars()
 	create_dvar("debug_model", "t6_wpn_zmb_perk_bottle_jugg_world");
 	create_dvar("enable_custom_subtitles", 1);
 	create_dvar("enable_permaperks", 0);
-	//Rage Inducer
 	create_dvar("enable_rampage", 1);
 	create_dvar("rampage_max_round", 50);
-	//Compass
 	create_dvar( "enable_compass", 1);
     create_dvar( "enable_direction", 1 );
     create_dvar( "enable_zone", 1 );
     create_dvar( "enable_angle", 1 );
-	//Zone Notifier
 	create_dvar("enable_notifier", 1);
-	//Bonus Points
 	create_dvar("enable_bonuspoints", 1);
 	create_dvar("bonuspoints_points", 100);
-	//Useful Nuke
 	create_dvar("enable_usefulnuke", 1);
 	create_dvar("usefulnuke_points", 60);
-	//Bo4 Ammo
 	create_dvar("enable_bo4ammo", 1);
-	//Tramsit Power
 	create_dvar("enable_transitpower", 1);
-	//Transit Misc
 	create_dvar("enable_transitmisc", 1);
-	
 	create_dvar("tranzit_place_dinerhatch", 1);
 	create_dvar("tranzit_tedd_tracker", 1);
-	
 	create_dvar("enable_lavadamage", 1);
-	
 	create_dvar("solo_tombstone", 1);
-	
 	create_dvar("enable_earlyspawn", 1);
 	create_dvar("enable_weaponanimation", 1);
 	create_dvar("perk_limit", 10);
-	
-	//Fast Travel Tranzit
 	create_dvar("enable_fasttravel", 1);
 	create_dvar("fasttravel_price", 1500);
     create_dvar("fasttravel_activateonpower", 0);
-    
     create_dvar("enable_healthbar", 1);
-
 	create_dvar("health_bar_look", 0);
-
     create_dvar("enable_zombiecount", 1);
-    
     create_dvar("enable_exfil", 1);
-    
     create_dvar("enable_debug", 0);
-    
     create_dvar("enable_instantpap", 1);
-    
     create_dvar("enable_vghudanim", 1);
-    
     create_dvar("enable_secretmusicsurvival", 1);
-
     create_dvar("enable_hitmarker", 1);
-
     create_dvar("enable_upgradedperks", 1);
-    
     create_dvar("enable_globalatm", 1);
-    
     create_dvar("enable_origins_mud", 0);
-	
     create_dvar("cinematic_mode", 0);
-    
     create_dvar("hide_HUD", 0);
-    
     create_dvar("enable_directorscut", 0);
     create_dvar("zombie_counter_look", 2);
-    //Infected from AW Zombies
     create_dvar("enable_infected", 0);
     create_dvar("infected_start_round", 15);
     create_dvar("infected_infect_chance", 60);
@@ -967,6 +950,18 @@ init_dvars()
 	create_dvar("power_id", 36631);
 	create_dvar("enable_shieldpartssurvival", 1);
 	create_dvar("movement_forgiving_range", 5);
+	
+	create_dvar( "afk_cooldown_duration", 120 );
+	create_dvar( "afk_kick_enabled", 1 );
+	create_dvar( "afk_disableInsteadOfKick", 0 );
+	create_dvar( "afk_announce_status", 1);
+	create_dvar( "afk_kick_duration", 640 );
+	create_dvar( "afk_kick_warning_duration", 240 );
+	create_dvar( "debug_text", 0 );
+	if(getDvarInt("afk_cooldown_duration") < 0)
+	{
+		setDvar("afk_cooldown_duration", 0);
+	}
 }
 
 init_player_things()
@@ -974,14 +969,10 @@ init_player_things()
 	self endon ("disconnect");
 	if(self.firstsetup == 0)
 	{
-		if( getDvarInt("gamemode") != 0)
-		{
-			level waittill ("end");
-		}
 		
 		self.firstsetup = 1;
 		self thread newround();
-		if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5))
+		if (getDvarInt("enable_rampage") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 9))
 			self player_rageinducer();
 		if ((getDvarInt("enable_compass") == 1) || (getDvarInt("max_clients") > 4))
 		{
@@ -1014,7 +1005,7 @@ init_player_things()
 		}
 		
 
-		if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
+		if (getDvarInt("enable_exfil") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 4 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9))
 			self player_exfil();
 		if (getDvarInt("enable_healthbar") == 1)
 			self player_health();
@@ -1032,7 +1023,7 @@ init_player_things()
 		if (getDvarInt("enable_infected") == 1 && getDvarInt("gamemode") == 0)
 			self player_infected();
 			
-		if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8))
+		if(getDvarInt("enable_zombiecount") == 1 && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5 || getDvarInt("gamemode") == 8 || getDvarInt("gamemode") == 9))
 			self player_enemycounter();
 		
 		
@@ -1934,7 +1925,7 @@ compassHud()
 	compass_hud.color = ( 1, 1, 1 );
 	compass_hud.hidewheninmenu = 1;
 	compass_hud.foreground = 1;
-	compass_hud thread removeHUDEndGame();
+	compass_hud thread removeHUDEndGame(self);
 
 	angle_hud = newClientHudElem(self);
 	angle_hud.alignx = "center";
@@ -1948,7 +1939,7 @@ compassHud()
 	angle_hud.color = ( 1, 1, 1 );
 	angle_hud.hidewheninmenu = 1;
 	angle_hud.foreground = 1;
-	angle_hud thread removeHUDEndGame();
+	angle_hud thread removeHUDEndGame(self);
 
 	zone_hud = newClientHudElem(self);
 	zone_hud.alignx = "center";
@@ -1962,7 +1953,7 @@ compassHud()
 	zone_hud.color = ( 1, 1, 1 );
 	zone_hud.hidewheninmenu = 1;
 	zone_hud.foreground = 1;
-	zone_hud thread removeHUDEndGame();
+	zone_hud thread removeHUDEndGame(self);
 
 	for(;;)
 	{
@@ -4041,7 +4032,6 @@ player_exfil()
 		return;
 	}
 //	self thread exfilHUD();
-	self thread downOnExfil();
 //	self thread showscoreboardtext();
 }
 
@@ -4275,7 +4265,7 @@ exfilHUD()
 	exfil_bg.hidewheninmenu = 1;
 	exfil_bg.foreground = 1;
 	exfil_bg setShader("scorebar_zom_1", 124, 32);
-	exfil_bg thread removeHUDEndGame();
+	exfil_bg thread removeHUDEndGame(self);
 	
 	
 	exfil_text = newClientHudElem(self);
@@ -4291,7 +4281,7 @@ exfilHUD()
 	exfil_text.hidewheninmenu = 1;
 	exfil_text.foreground = 1;
 	exfil_text.label = &"Exfil Timer: ^2";
-	exfil_text thread removeHUDEndGame();
+	exfil_text thread removeHUDEndGame(self);
 	
 	exfil_target = newClientHudElem(self);
 	exfil_target.alignx = "left";
@@ -4306,7 +4296,7 @@ exfilHUD()
 	exfil_target.hidewheninmenu = 1;
 	exfil_target.foreground = 1;
 	exfil_target settext ("Go to the ^2" + level.escapezone);
-	exfil_target thread removeHUDEndGame();
+	exfil_target thread removeHUDEndGame(self);
 	
 	exfil_kills = newClientHudElem(self);
 	exfil_kills.alignx = "left";
@@ -4321,7 +4311,7 @@ exfilHUD()
 	exfil_kills.hidewheninmenu = 1;
 	exfil_kills.foreground = 1;
 	exfil_kills.label = &"Zombie Kills Left: ^2";
-	exfil_kills thread removeHUDEndGame();
+	exfil_kills thread removeHUDEndGame(self);
 	
 	thread activateTimer(exfil_text);
 	
@@ -4597,7 +4587,7 @@ maintain_exfil_zombie_count()
 		{
 			level.zombie_total = 40;
 		}
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -4845,7 +4835,7 @@ spawnATMDeposit()
 		}
 		else
 		{
-			wait 0.01;
+			wait 0.05;
 		}
 	}
 }
@@ -5163,7 +5153,6 @@ setpoint_custom( point, relativepoint, xoffset, yoffset ) //checked matches cerb
 
 health_bar_hud()
 {
-	level endon("end_game");
 	self endon("disconnect");
 	flag_wait( "initial_blackscreen_passed" );
 
@@ -5183,10 +5172,13 @@ health_bar_hud()
 	health_bar.hidewheninmenu = 1;
 	health_bar.bar.hidewheninmenu = 1;
 	health_bar.barframe.hidewheninmenu = 1;
+	health_bar thread removeHUDEndGame(self);
+	health_bar.bar thread removeHUDEndGame(self);
 
 	health_bar_text = createfontstring("objective", 1.1);
 	health_bar_text setpoint_custom(undefined, "LEFT", x + 67, y - 0.5);
 	health_bar_text.hidewheninmenu = 1;
+		health_bar_text thread removeHUDEndGame(self);
 
 	x -= 16;
 	y -= 8;
@@ -5196,6 +5188,7 @@ health_bar_hud()
 	shield_bar.hidewheninmenu = 1;
 	shield_bar.bar.hidewheninmenu = 1;
 	shield_bar.barframe.hidewheninmenu = 1;
+	shield_bar thread removeHUDEndGame(self);
 
 
 	if(level.energy_bar_mode == true)
@@ -5259,7 +5252,6 @@ health_bar_hud()
 shield_hud()
 {
 	self endon("disconnect");
-	level endon("end_game");
 	flag_wait("initial_blackscreen_passed");
 
 	shield_text = self createprimaryprogressbartext();
@@ -5921,6 +5913,7 @@ rampageHUD()
 	rampage_hud.hidewheninmenu = 1;
 	rampage_hud.foreground = 1;
 	rampage_hud.label = &"Rounds of Rampage Left: ^6";
+	rampage_hud thread removeHUDEndGame();
 
 	for(;;)
 	{
@@ -6190,7 +6183,7 @@ player_secretmusic()
     self.teddybears = 0;
 }
 
-spawnTeddyBear(x,y,z,angle,dontusemodel)
+spawnTeddyBear(x,y,z,angle,dontusemodel,duration)
 {
 	TeddyTrigger = spawn( "trigger_radius", ((x,y,z)), 1, 50, 50 );
 	if(!isDefined(dontusemodel))
@@ -6219,11 +6212,22 @@ spawnTeddyBear(x,y,z,angle,dontusemodel)
 				if (i.teddybears == 3) 
 				{
 					i playlocalsound("mus_zmb_secret_song");
+					if(isDefined(duration))
+					{
+						i thread survival_teddy_bear_reset(duration);
+					}
 				}
 			}
 		}
 		wait 0.1;
 	}
+}
+
+survival_teddy_bear_reset(duration)
+{
+	wait duration;
+	self.teddybears = 0;
+	self.collectedbears = [];
 }
 
 if_player_already_collected(bear)
@@ -6246,21 +6250,21 @@ setteddybears()
 		{
 			if(getDvar("ui_zm_mapstartlocation") == "town")
 			{
-				thread spawnTeddyBear(430,-570,-61,26);
-				thread spawnTeddyBear(1891.7, -1.85785, -55.875,-137, true);
-				thread spawnTeddyBear(699,-1387,128,-48);
+				thread spawnTeddyBear(430,-570,-61,26, undefined, 260);
+				thread spawnTeddyBear(1891.7, -1.85785, -55.875,-137, true, 260);
+				thread spawnTeddyBear(699,-1387,128,-48, undefined, 260);
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "transit")
 			{
-				thread spawnTeddyBear(-7565.35, 4541.86, -55.875, -177, true);
-				thread spawnTeddyBear(-6614.38, 4459.99, -56.4019, -120);
-				thread spawnTeddyBear(-6380,5625,-45,-132);
+				thread spawnTeddyBear(-7565.35, 4541.86, -55.875, -177, true, 260);
+				thread spawnTeddyBear(-6614.38, 4459.99, -56.4019, -120, undefined, 260);
+				thread spawnTeddyBear(-6380,5625,-45,-132, undefined, 260);
 			}
 			else if (getDvar("ui_zm_mapstartlocation") == "farm")
 			{
-				thread spawnTeddyBear(8512,-5913,52,-134);
-				thread spawnTeddyBear(8449,-5350,48,127);
-				thread spawnTeddyBear(7916.37, -6560.16, 251.125, 19, true);
+				thread spawnTeddyBear(8512,-5913,52,-134, undefined, 260);
+				thread spawnTeddyBear(8449,-5350,48,127, undefined, 260);
+				thread spawnTeddyBear(7916.37, -6560.16, 251.125, 19, true, 260);
 			}
 		}
 	}
@@ -8484,7 +8488,7 @@ printColors()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.10 - 12.24.2025");
+	self iprintln("^5Your Version: ^23.10.5 - 7.17.2026");
 }
 
 modslist_text()
@@ -8810,7 +8814,7 @@ InfectedHud()
 	infected_hud.hidewheninmenu = 1;
 	infected_hud.foreground = 1;
 	infected_hud.label = &"Infected! Find a cure skull! - ";
-	infected_hud thread removeHUDEndGame();
+	infected_hud thread removeHUDEndGame(self);
 
 	for(;;)
 	{
@@ -9364,7 +9368,7 @@ buildable_use_hold_think_internal_new( player, bind_stub )
     if ( !isdefined( bind_stub ) )
         bind_stub = self.stub;
 
-    wait 0.01;
+    wait 0.05;
 
     if ( !isdefined( self ) )
     {
@@ -10649,8 +10653,6 @@ respawnPlayer()
 		{
 			self [[ level.spawnplayer ]]();
 		}
-		self startHUDMessage();
-		self.playedminigamehudmsg = 1;
 	}
 }
 
@@ -10909,7 +10911,7 @@ red_glow(elem)
 	{
 		elem.color = ( 1, colornum, colornum );
 		colornum += 0.05;
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -10921,7 +10923,7 @@ green_glow(elem)
 	{
 		elem.color = ( colornum, 1, colornum );
 		colornum += 0.05;
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -11475,7 +11477,7 @@ gungameHUD()
 	nametext.hidewheninmenu = 1;
 	nametext.foreground = 0;
 	nametext.label = &"Weapons left: ^6";
-	nametext thread removeHUDEndGame();
+	nametext thread removeHUDEndGame(self);
 	
 	nametarget = newClientHudElem(self);
 	nametarget.alignx = "center";
@@ -11490,7 +11492,7 @@ gungameHUD()
 	nametarget.hidewheninmenu = 1;
 	nametarget.foreground = 0;
 	nametarget.label = &"Kills Left: ^6";
-	nametarget thread removeHUDEndGame();
+	nametarget thread removeHUDEndGame(self);
 	
 	for(;;)
 	{
@@ -11519,7 +11521,7 @@ crankedHUD()
 	self.nametext.hidewheninmenu = 1;
 	self.nametext.foreground = 0;
 	self.nametext setText ("Cranked!");
-	self.nametext thread removeHUDEndGame();
+	self.nametext thread removeHUDEndGame(self);
 	
 	self.nametarget = newClientHudElem(self);
 	self.nametarget.alignx = "left";
@@ -11534,13 +11536,13 @@ crankedHUD()
 	self.nametarget.hidewheninmenu = 1;
 	self.nametarget.foreground = 0;
 	self.nametarget.label = &"";
-	self.nametarget thread removeHUDEndGame();
+	self.nametarget thread removeHUDEndGame(self);
 //	self.nametarget setText(self.seconds + ":" + self.miliseconds);
 	
 	for(;;)
 	{
 		self.nametarget setValue (self.seconds/10);
-		wait 0.01;
+		wait 0.05;
 	}
 
 }
@@ -12470,6 +12472,11 @@ wait_for_ready_input()
 					{
 						level.gumgamestarted = 1;
 					}
+					else if (getDvarInt("gamemode") == 9)
+					{
+						level.gamemodestarted = 1;
+					}
+					level.gamemodestarted = 1;
 					foreach (player in level.players)
 					{
 						player disableInvulnerability();
@@ -12482,7 +12489,7 @@ wait_for_ready_input()
 				}
 			}
 		}
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -12532,6 +12539,7 @@ playerScoresHUD(index, ref)
 	namebg.hidewheninmenu = 1;
 	namebg.foreground = 0;
 	namebg setShader("scorebar_zom_1", 124, 32);
+	namebg thread removeHUDEndGame();
 
 	nameHUD = newhudelem();
 	nameHUD.x = 10;
@@ -12544,6 +12552,7 @@ playerScoresHUD(index, ref)
 	nameHUD.fontscale = 0;
 	nameHUD.foreground = 0;
 	nameHUD setText (ref.name);
+	nameHUD thread removeHUDEndGame();
 
 	scoreHUD = newhudelem();
 	scoreHUD.x = 10;
@@ -12556,6 +12565,7 @@ playerScoresHUD(index, ref)
 	scoreHUD.fontscale = 0;
 	scoreHUD.foreground = 0;
 	scoreHUD.label = ("");
+	scoreHUD thread removeHUDEndGame();
 	
 	for(;;)
 	{
@@ -13006,10 +13016,8 @@ nextroundtimer()
 	}
 }
 
-startHUDMessage()
+startHUDMessage(playedminigamehudmsg)
 {
-	flag_wait( "initial_blackscreen_passed" );
-	
 	hud = newClientHudElem(self);
 	hud.alignx = "center";
 	hud.aligny = "top";
@@ -13079,6 +13087,10 @@ startHUDMessage()
 	{
 		hud2 settext("Gum Game");
 	}
+	else if (getDvarInt("gamemode") == 9)
+	{
+		hud2 settext("Jingle Hells");
+	}
 	hud2.fontscale = 8;
 	hud2 changefontscaleovertime( 1 );
     hud2 fadeovertime( 1 );
@@ -13131,6 +13143,10 @@ startHUDMessage()
 	{
 		hud3 settext("Every round or after its used, you will roll a new Gobble Gum");
 	}
+	else if (getDvarInt("gamemode") == 9)
+	{
+		hud3 settext("Holy Jolly");
+	}
 	hud3.fontscale = 2;
 	hud3 changefontscaleovertime( 1 );
     hud3 fadeovertime( 1 );
@@ -13139,14 +13155,7 @@ startHUDMessage()
 	wait 1;
 	self notify ("can_readyup");
 
-    if (level.gungamestarted == 0 || level.crankedstarted == 0 || level.mysterygunsstarted == 0 || level.redgreenlightstarted == 0 || level.zombiesnacksstarted == 0 || level.gumgamestarted == 0)
-	{
-		level waittill ("end");
-	}
-	else
-	{
-		wait 3.25;
-	}
+	wait 10;
 
     hud changefontscaleovertime( 1 );
     hud fadeovertime( 1 );
@@ -13179,7 +13188,7 @@ init_gamemode_powerups()
 
     level._zombiemode_powerup_grab = ::custom_powerup_grab;
 
-   	if(getDvarInt("gamemode") != 4 && getDvarInt("gamemode") != 8)
+   	if(getDvarInt("gamemode") != 4 && getDvarInt("gamemode") != 8 && getDvarInt("gamemode") != 9)
 	{
 		include_zombie_powerup("unlimited_ammo");
 		level.unlimited_ammo_duration = 30;
@@ -13691,7 +13700,7 @@ wait_for_next_match_input()
 			level.restartHUD setText ("Press [{+melee}] and [{+speed_throw}] to vote to end the match!: ^5" + level.gungamevotes + "/" + level.players.size + " - " + level.restarttime);
 			self notify ("next_match_voted");
 		}
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -14195,14 +14204,22 @@ init_music_states_new()
     level.music_round_override = 0;
     level.old_music_state = undefined;
     level.zmb_music_states = [];
-	level thread setupmusicstate( "round_start", "mus_zombie_round_start", 1, 1, 1, "WAVE" );
-	if (level.script == "zm_transit" && getDvarInt("tranzit_alpha_round_end") == 1)
+	if(getDvarInt("gamemode") == 9)
 	{
-		level thread setupmusicstate( "round_end", "mus_transit_zombie_round_over", 1, 1, 1, "SILENCE" );
+		level thread setupmusicstate( "round_start", "mus_jingle_round_start", 1, 1, 1, "WAVE" );
+		level thread setupmusicstate( "round_end", "mus_zombie_round_over", 1, 1, 1, "SILENCE" );
 	}
 	else
 	{
-		level thread setupmusicstate( "round_end", "mus_zombie_round_over", 1, 1, 1, "SILENCE" );
+		level thread setupmusicstate( "round_start", "mus_zombie_round_start", 1, 1, 1, "WAVE" );
+		if (level.script == "zm_transit" && getDvarInt("tranzit_alpha_round_end") == 1)
+		{
+			level thread setupmusicstate( "round_end", "mus_transit_zombie_round_over", 1, 1, 1, "SILENCE" );
+		}
+		else
+		{
+			level thread setupmusicstate( "round_end", "mus_zombie_round_over", 1, 1, 1, "SILENCE" );
+		}
 	}
     level thread setupmusicstate( "wave_loop", "WAVE", 0, 1, undefined, undefined );
     level thread setupmusicstate( "game_over", "mus_zombie_game_over", 1, 0, undefined, "SILENCE" );
@@ -14534,10 +14551,6 @@ end_game_new()
 	{
 		MissionFailed();
 	}
-	else if(getDvarInt("endgame_restart_map") == 2)
-	{
-		map_restart(1);
-	}
 	else
 	{
 		array_thread( get_players(), ::player_exit_level );
@@ -14582,8 +14595,13 @@ choose_end_text(player)
 	}
 }
 
-removeHUDEndGame()
+removeHUDEndGame(playerref)
 {
+	level endon ("death");
+	if(isDefined(playerref))
+	{
+		playerref endon ("disconnect");
+	}
 	level waittill_any ("intermission", "end_game");
 	self destroy();
 }
@@ -14895,7 +14913,7 @@ moveCheckHUD()
 		{
 			self.movecheckHUD.alpha = 1;
 		}
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -14944,6 +14962,9 @@ punishmentHUD(text)
 	self.punishmenttext fadeovertime( 1 );
 	self.punishmenttext.alpha = 1;
 	
+	self.punishmenttext thread removeHUDEndGame(self);
+	self.punishmenttitle thread removeHUDEndGame(self);
+	
 	wait 1;
 	
 	wait 3;
@@ -14975,6 +14996,7 @@ lightStatusHUD()
 	level.lightStatus.hidewheninmenu = 1;
 	level.lightStatus.foreground = 1;
 	level.lightStatus setText ("");
+	level.lightStatus thread removeHUDEndGame();
 }
 
 redlight_greenlight()
@@ -15632,15 +15654,15 @@ movetrigger(z)
     }
 }
 
-custom_secret_song_spawns(locationarray, anglearray, secretsong, model)
+custom_secret_song_spawns(locationarray, anglearray, secretsong, model, duration)
 {
 	for(i = 0; i < locationarray.size; i++)
 	{
-		level thread custom_secret_song_activator(locationarray[i], anglearray[i], secretsong, model);
+		level thread custom_secret_song_activator(locationarray[i], anglearray[i], secretsong, model, duration);
 	}
 }
 
-custom_secret_song_activator(origin, angle, secretsong, model)
+custom_secret_song_activator(origin, angle, secretsong, model, song_duration)
 {
 	if(!isDefined(model))
 	{
@@ -15673,11 +15695,22 @@ custom_secret_song_activator(origin, angle, secretsong, model)
 				if (i.customcollectedbears.size == 3) 
 				{
 					i playlocalsound(secretsong);
+					if(isDefined(song_duration))
+					{
+						i thread secret_song_is_over(song_duration);
+					}
 				}
 			}
 		}
 		wait 0.1;
 	}
+}
+
+secret_song_is_over(duration)
+{
+	wait duration;
+	self.customcollectedbears = [];
+	
 }
 
 if_player_already_collected_custom(bear)
@@ -16196,7 +16229,7 @@ createPlayerIcon(index, ref)
 	player_icon.x = level.players[index].origin[0];
 	player_icon.y = level.players[index].origin[1];
 	player_icon.z = level.players[index].origin[2] + 60;
-	player_icon thread removeHUDEndGame();
+	player_icon thread removeHUDEndGame(self);
 	player_icon.color = (1,1,1);
 	player_icon.isshown = 1;
 	player_icon.archived = 1;
@@ -16224,7 +16257,7 @@ createPlayerIcon(index, ref)
 		{
 			player_icon.alpha = 0;
 		}	
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -16289,7 +16322,6 @@ afk_disable()
 {
 	self.isafk = 0;
 	self notify ("afk_over");
-	self.ignoreme = 0;
 	self.kickrisk = 0;
 	self DisableInvulnerability();
 	self freezeControls(false);
@@ -16301,6 +16333,8 @@ afk_disable()
 			player iprintln(self.name + " is no longer afk!");
 		}
 	}
+	wait 5;
+	self.ignoreme = 0;
 }
 
 afkmonitor()
@@ -16323,7 +16357,7 @@ afkmonitor()
 		{
 			self.ignoreme = 1;
 		}
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -16556,7 +16590,7 @@ get_random_walkable_location(origin, range, player)
 			return false;
 		}
 		tries += 1;
-		wait 0.01;
+		wait 0.05;
 	}
 }
 
@@ -16585,7 +16619,7 @@ chugabud_corpse_revive_icon( player )
         hud_elem.x = self.origin[0];
         hud_elem.y = self.origin[1];
         hud_elem.z = self.origin[2] + height_offset;
-        wait 0.01;
+        wait 0.05;
     }
 }
 
@@ -16829,7 +16863,6 @@ send_toast(text, icon, subtext, sound)
 
 toast_watcher()
 {
-	level endon ("end_game");
 	for(;;)
 	{
 		if(level.toasts.size == 0)
@@ -16844,8 +16877,6 @@ toast_watcher()
 
 play_toast(toast_info)
 {
-	level endon ("end_game");
-	
 	x = 0;
 	y = 0;
 	start_x = x - 50;

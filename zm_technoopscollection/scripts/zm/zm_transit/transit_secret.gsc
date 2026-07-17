@@ -55,7 +55,7 @@ init()
 {
 	setLogsLocation();
 	
-	custom_secret_song_spawns(array((-6304.36, 5337.64, -55.875),(1747.24, -1438.61, -55.875),(-6496.36, -7859.64, 6.45054)), array(45,-134.287,-45), "mus_custom_transit_ee");
+	custom_secret_song_spawns(array((-6304.36, 5337.64, -55.875),(1747.24, -1438.61, -55.875),(-6496.36, -7859.64, 6.45054)), array(45,-134.287,-45), "mus_custom_transit_ee", undefined, 270);
 	
 	if(getDvar("mapname") == "zm_transit" && getDvar( "g_gametype" ) == "zclassic" && (getDvarInt("gamemode") == 0 || getDvarInt("gamemode") == 8))
 	{
@@ -378,6 +378,7 @@ setLogsLocation()
 		else if (getDvar("ui_zm_mapstartlocation") == "transit")
 		{
 			level thread spawnRadio((-5998.35, 4408.7, -46.0484),-169,"vox_busdepot_audiolog", 16);
+			level thread placeScrambler((-7779.18, 4483.31, -21.3313),(270,-162.59,0));
 			level.totalradios = 1;
 		}
 		else if (getDvar("ui_zm_mapstartlocation") == "farm")
