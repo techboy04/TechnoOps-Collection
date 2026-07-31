@@ -315,6 +315,7 @@ TEDDTrackerHUD()
 	tedd_tracker.color = ( 1, 1, 1 );
 	tedd_tracker.hidewheninmenu = 1;
 	tedd_tracker.foreground = 1;
+	tedd_tracker removeHUDEndGame();
 	tedd_tracker setText("T.E.D.D is " + isBusMoving(bus) + " at ^2" + getBusStatus(bus.destinationindex));
 	
 	oldindex = bus.destinationindex;

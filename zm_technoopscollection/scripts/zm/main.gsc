@@ -242,13 +242,13 @@ init()
 			level.gungamestarted = 0;
 			level.zombieskilled = 0;
 			level thread DelayListCreation();
-			
+			level thread introHUD();
+			level waittill ("end");
 			for( i = 0; i < 8; i++ )
 			{
 				thread playerScoresHUD(i, level.players[i]);
 				wait 0.05;
 			}
-			level thread introHUD();
 			
 		}
 		else if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
@@ -4520,23 +4520,8 @@ spawnExit()
 			i.hasescaped = true;
 			i.canrespawn = 0;
 			level.successfulexfil = 1;
+			i thread fadetoblackforxsec( 0, 3, 0.5, 0.5, "black");
 			wait 1;
-			escapetransition = newClientHudElem(i);
-			escapetransition.x = 0;
-			escapetransition.y = 0;
-			escapetransition.alpha = 0;
-			escapetransition.horzalign = "fullscreen";
-			escapetransition.vertalign = "fullscreen";
-			escapetransition.foreground = 0;
-			escapetransition setshader( "white", 640, 480 );
-			escapetransition.color = (0,0,0);
-			escapetransition fadeovertime( 0.5 );
-			escapetransition.alpha = 1;
-			wait 0.5;
-			
-//			escapetransition.foreground = 0;
-//			escapetransition fadeovertime( 0.2 );
-//			escapetransition.alpha = 0;
 			i disableinvulnerability();
 			if (level.players.size == 1)
 			{
@@ -4547,7 +4532,6 @@ spawnExit()
 			}
 			else
 			{
-//				escapetransition.alpha = 0;
 				i thread maps\mp\gametypes_zm\_spectating::setspectatepermissions();
     			i.sessionstate = "spectator";
 //				escapetransition destroy();
@@ -5189,6 +5173,8 @@ health_bar_hud()
 	shield_bar.bar.hidewheninmenu = 1;
 	shield_bar.barframe.hidewheninmenu = 1;
 	shield_bar thread removeHUDEndGame(self);
+	shield_bar.bar thread removeHUDEndGame(self);
+	shield_bar.barframe thread removeHUDEndGame(self);
 
 
 	if(level.energy_bar_mode == true)
@@ -5203,6 +5189,7 @@ health_bar_hud()
 		health_text.y = -50;
 		health_text.fontscale = 1;
 		health_text.hidewheninmenu = 1;
+		health_text thread removeHUDEndGame(self);
 	}
 
 	for(;;)
@@ -8488,7 +8475,7 @@ printColors()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.10.5 - 7.17.2026");
+	self iprintln("^5Your Version: ^23.10.6 - 7.31.2026");
 }
 
 modslist_text()
@@ -12523,7 +12510,7 @@ introHUD()
 }
 
 playerScoresHUD(index, ref)
-{
+{	
 	y = (index * 24) + -120;
 	
 	namebg = newhudelem();
@@ -16191,6 +16178,7 @@ flowstate_overlay_flash()
 	self._flowstate_overlay.alpha = 0;
 	self._flowstate_overlay.color = (1,1,1);
 	self._flowstate_overlay.background = 1;
+	self._flowstate_overlay thread removeHUDEndgame(self);
 	for(;;)
 	{
 		self._flowstate_overlay fadeovertime( 0.5 );

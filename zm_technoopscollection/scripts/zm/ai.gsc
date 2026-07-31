@@ -1670,13 +1670,13 @@ bot_update_wander()
 	
 	if(level.botsmode == 2)
 	{
-		location = get_random_walkable_location(get_players()[0].origin, 200, self);
-		self AddGoal(location, 100, 1, "wander");
+//		location = get_random_walkable_location(get_players()[0].origin, 200, self);
+//		self AddGoal(location, 100, 1, "wander");
 	}
 	else if(level.botsmode == 1)
 	{
-		location = get_random_walkable_location(get_players()[0].origin, 1000, self);
-		self AddGoal(location, 100, 1, "wander");	
+//		location = get_random_walkable_location(get_players()[0].origin, 1000, self);
+//		self AddGoal(location, 100, 1, "wander");	
 	}
 	else if(level.botsmode == 3)
 	{
@@ -2110,7 +2110,7 @@ bot_use_gobblegum()
 				}
 				else if(level.gobblegums[self.gobblegum].type == "timed")
 				{
-					self timed_gobblegum();
+//					self timed_gobblegum();
 				}
 				self.gobblegum_active = 0;
 				self notify ("gobblegum_used");
