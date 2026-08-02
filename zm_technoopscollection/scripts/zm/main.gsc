@@ -203,6 +203,7 @@ init()
     level thread onPlayerConnect();
     level thread betaMessage();
     level thread command_thread();
+	level thread filter_chat();
     level thread updateSomeSettings();
 	level removebarriers();
 	level.energy_bar_mode = false;
@@ -315,6 +316,8 @@ init()
 			level.gamemodestarted = 0;
 			level thread introHUD();
 		}
+		
+
 		if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
 		{
 			level thread nextroundtimer();
@@ -1340,7 +1343,14 @@ betaMessage()
 	}
 	else
 	{
-		betamessage setText ("TechnoOps Collection");
+		if(getDvarInt("gamemode") == 0)
+		{
+			betamessage setText ("TechnoOps Collection");
+		}
+		else
+		{
+			betamessage setText ("TechnoOps Collection\n" + getGamemodeText(getDvarInt("gamemode")));
+		}
 	}
 }
 
@@ -8229,6 +8239,47 @@ show_grief_hud_msg_cleanup()
 //
 //////////////////////////////////
 
+filter_chat()
+{
+	create_dvar("enable_filter", 0);
+	create_dvar("banned_words", "");
+	
+	if(getDvarInt("enable_filter") != 1)
+	{
+		return;
+	}
+	
+	banned_words = strTok(tolower(getDvar("banned_words")), " ");
+	for(;;)
+	{
+		level waittill( "say", message, player, isHidden );
+		args = strTok(tolower( message ), " " );
+		for(j = 0; j < args.size; j++)
+		{
+			for(i = 0; i < banned_words.size; i++)
+			{
+				if(args[j] == banned_words[i])
+				{
+					if(!isDefined(player.punishlevel))
+					{
+						player.punishlevel = 0;
+					}
+					player.punishlevel += 1;
+					if(player.punishlevel == 2)
+					{
+						player iprintln("Watch it!");
+					}
+					else if(player.punishlevel > 2)
+					{
+						player dodamage(player.health, player.origin);
+						player thread goofy_laugh_at_player();
+						player iprintln("Cmon man!");
+					}
+				}
+			}
+		}
+	}
+}
 
 command_thread()
 {
@@ -8475,7 +8526,7 @@ printColors()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.10.6 - 7.31.2026");
+	self iprintln("^5Your Version: ^23.10.7 - 8.1.2026");
 }
 
 modslist_text()
@@ -11185,27 +11236,30 @@ actor_killed_override( einflictor, attacker, idamage, smeansofdeath, sweapon, vd
 
 		if (getDvarInt("gamemode") == 1)
 		{
-			if (attacker.weaponprog >= attacker.progmax - 1)
+			if(!attacker maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 			{
-				attacker.weaponprog = 0;
-				attacker changeweapon(false);
-//				attacker.progmax = (attacker.weaponlevel * 2);
-				attacker.progmax = getdvarint("gungame_max_score");
-			}
-			else
-			{
-				attacker.weaponprog += 1;
-			}
-			level.zombie_total = 50;
-			level.zombieskilled += 1;
-//			max_kills = level.players.size * 20;
-			max_kills = 20;
-			if (level.zombieskilled == max_kills)
-			{
-				level.zombieskilled = 0;
-				if(level.round_number < 20)
+				if (attacker.weaponprog >= attacker.progmax - 1)
 				{
-					level notify ("force_next_round");
+					attacker.weaponprog = 0;
+					attacker changeweapon(false);
+//					attacker.progmax = (attacker.weaponlevel * 2);
+					attacker.progmax = getdvarint("gungame_max_score");
+				}
+				else
+				{
+					attacker.weaponprog += 1;
+				}
+				level.zombie_total = 50;
+				level.zombieskilled += 1;
+//				max_kills = level.players.size * 20;
+				max_kills = 20;
+				if (level.zombieskilled == max_kills)
+				{
+					level.zombieskilled = 0;
+					if(level.round_number < 20)
+					{
+						level notify ("force_next_round");
+					}
 				}
 			}
 		}
@@ -12431,52 +12485,61 @@ wait_for_ready_input()
 				level.playersready += 1;
 				self.voted = 1;
 				level.introHUD setText ("Press [{+melee}] and [{+speed_throw}] to ready up!: ^5" + level.playersready + "/" + level.players.size);
-				if (level.playersready == level.players.size)
-				{
-					wait 1;
-					if (getDvarInt("gamemode") == 1)
-					{
-						level.gungamestarted = 1;
-					}
-					else if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
-					{
-						level.crankedstarted = 1;
-						level thread playcrankedmusic();
-					}
-					else if (getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
-					{
-						level.mysterygunsstarted = 1;
-					}
-					else if (getDvarInt("gamemode") == 4)
-					{
-						level.redgreenlightstarted = 1;
-					}
-					else if (getDvarInt("gamemode") == 7)
-					{
-						level.zombiesnacksstarted = 1;
-					}
-					else if (getDvarInt("gamemode") == 8)
-					{
-						level.gumgamestarted = 1;
-					}
-					else if (getDvarInt("gamemode") == 9)
-					{
-						level.gamemodestarted = 1;
-					}
-					level.gamemodestarted = 1;
-					foreach (player in level.players)
-					{
-						player disableInvulnerability();
-						if (getDvarInt("gamemode") == 1)
-						{
-							player iprintln("You can type .restart in chat to end the match!");
-						}
-					}
-					level notify ("end");
-				}
 			}
 		}
 		wait 0.05;
+	}
+}
+
+checkForReadyUps()
+{
+	level endon ("end");
+	for(;;)
+	{
+		if (level.playersready >= level.players.size)
+		{
+			wait 1;
+			if (getDvarInt("gamemode") == 1)
+			{
+				level.gungamestarted = 1;
+			}
+			else if (getDvarInt("gamemode") == 2 || getDvarInt("gamemode") == 6)
+			{
+				level.crankedstarted = 1;
+				level thread playcrankedmusic();
+			}
+			else if (getDvarInt("gamemode") == 3 || getDvarInt("gamemode") == 5)
+			{
+				level.mysterygunsstarted = 1;
+			}
+			else if (getDvarInt("gamemode") == 4)
+			{
+				level.redgreenlightstarted = 1;
+			}
+			else if (getDvarInt("gamemode") == 7)
+			{
+				level.zombiesnacksstarted = 1;
+			}
+			else if (getDvarInt("gamemode") == 8)
+			{
+				level.gumgamestarted = 1;
+			}
+			else if (getDvarInt("gamemode") == 9)
+			{
+				level.gamemodestarted = 1;
+			}
+			level.gamemodestarted = 1;
+			foreach (player in level.players)
+			{
+				player disableInvulnerability();
+				if (getDvarInt("gamemode") == 1)
+				{
+					player iprintln("You can type .restart in chat to end the match!");
+				}
+			}
+			level notify ("end");
+		}
+		wait 0.1;
 	}
 }
 
@@ -12494,6 +12557,7 @@ introHUD()
 	level.introHUD.foreground = 0;
 	level.introHUD.fontscale = 1.5;
 	level.introHUD setText ("Press [{+melee}] and [{+speed_throw}] to ready up!: ^5" + level.playersready + "/" + level.players.size);
+	level thread checkForReadyUps();
 	level waittill ("end");
 	level.introHUD fadeovertime( 0.25 );
 	level.introHUD.alpha = 0;
@@ -12653,8 +12717,8 @@ auto_revive_gungame( reviver, dont_enable_weapons )
 }
 
 player_damage_override_gungame( einflictor, eattacker, idamage, idflags, smeansofdeath, sweapon, vpoint, vdir, shitloc, psoffsettime )
-{
-    if ( isdefined( level._game_module_player_damage_callback ) )
+{	
+	if ( isdefined( level._game_module_player_damage_callback ) )
         self [[ level._game_module_player_damage_callback ]]( einflictor, eattacker, idamage, idflags, smeansofdeath, sweapon, vpoint, vdir, shitloc, psoffsettime );
 
     idamage = self check_player_damage_callbacks( einflictor, eattacker, idamage, idflags, smeansofdeath, sweapon, vpoint, vdir, shitloc, psoffsettime );
@@ -12827,8 +12891,115 @@ player_damage_override_gungame( einflictor, eattacker, idamage, idflags, smeanso
     if ( level.intermission )
         level waittill( "forever" );
 
-    flag_set( "instant_revive" );
-	self thread wait_and_revive();
+	if(self.weaponlevel != 0)
+	{
+		flag_set( "instant_revive" );
+		self thread wait_and_revive();
+	}
+	else
+	{
+		if ( level.scr_zm_ui_gametype == "zcleansed" && idamage > 0 )
+		{
+			if ( isdefined( eattacker ) && isplayer( eattacker ) && eattacker.team != self.team && ( !( isdefined( self.laststand ) && self.laststand ) && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || !isdefined( self.last_player_attacker ) ) )
+			{
+				if ( isdefined( eattacker.maxhealth ) && ( isdefined( eattacker.is_zombie ) && eattacker.is_zombie ) )
+					eattacker.health = eattacker.maxhealth;
+
+				if ( isdefined( level.player_kills_player ) )
+					self thread [[ level.player_kills_player ]]( einflictor, eattacker, idamage, idflags, smeansofdeath, sweapon, vpoint, vdir, shitloc, psoffsettime );
+			}
+		}
+
+		if ( self.lives > 0 && self hasperk( "specialty_finalstand" ) )
+		{
+			self.lives--;
+
+			if ( isdefined( level.chugabud_laststand_func ) )
+			{
+				self thread [[ level.chugabud_laststand_func ]]();
+				return 0;
+			}
+		}
+
+		players = get_players();
+		count = 0;
+
+		for ( i = 0; i < players.size; i++ )
+		{
+			if ( players[i] == self || players[i].is_zombie || players[i] maps\mp\zombies\_zm_laststand::player_is_in_laststand() || players[i].sessionstate == "spectator" )
+				count++;
+		}
+
+		if ( count < players.size || isdefined( level._game_module_game_end_check ) && ![[ level._game_module_game_end_check ]]() )
+		{
+			if ( isdefined( self.lives ) && self.lives > 0 && ( isdefined( level.force_solo_quick_revive ) && level.force_solo_quick_revive ) && self hasperk( "specialty_quickrevive" ) )
+				self thread wait_and_revive();
+
+			return finaldamage;
+		}
+
+		if ( players.size == 1 && flag( "solo_game" ) )
+		{
+			if ( self.lives == 0 || !self hasperk( "specialty_quickrevive" ) )
+				self.intermission = 1;
+		}
+
+		solo_death = players.size == 1 && flag( "solo_game" ) && ( self.lives == 0 || !self hasperk( "specialty_quickrevive" ) );
+		non_solo_death = count > 1 || players.size == 1 && !flag( "solo_game" );
+
+		if ( ( solo_death || non_solo_death ) && !( isdefined( level.no_end_game_check ) && level.no_end_game_check ) )
+		{
+			level notify( "stop_suicide_trigger" );
+			self thread maps\mp\zombies\_zm_laststand::playerlaststand( einflictor, eattacker, idamage, smeansofdeath, sweapon, vdir, shitloc, psoffsettime );
+
+			if ( !isdefined( vdir ) )
+				vdir = ( 1, 0, 0 );
+
+			self fakedamagefrom( vdir );
+
+			if ( isdefined( level.custom_player_fake_death ) )
+				self thread [[ level.custom_player_fake_death ]]( vdir, smeansofdeath );
+			else
+				self thread player_fake_death();
+		}
+
+		if ( count == players.size && !( isdefined( level.no_end_game_check ) && level.no_end_game_check ) )
+		{
+			if ( players.size == 1 && flag( "solo_game" ) )
+			{
+				if ( self.lives <= 0 || !self hasperk( "specialty_quickrevive" ) )
+				{
+					self.lives = 0;
+					level notify( "pre_end_game" );
+					wait_network_frame();
+
+					if ( flag( "dog_round" ) )
+						increment_dog_round_stat( "lost" );
+
+					level notify( "end_game" );
+				}
+				else
+					return finaldamage;
+			}
+			else
+			{
+				level notify( "pre_end_game" );
+				wait_network_frame();
+
+				if ( flag( "dog_round" ) )
+					increment_dog_round_stat( "lost" );
+
+				level notify( "end_game" );
+			}
+
+			return 0;
+		}
+		else
+		{
+			surface = "flesh";
+			return finaldamage;
+		}
+	}
 }
 
 round_over_minigame()
@@ -13000,6 +13171,50 @@ nextroundtimer()
 			}
 		}
 		wait 1;
+	}
+}
+
+getGamemodeText(num)
+{
+	if(num == 0)
+	{
+		return "Classic";
+	}
+	else if(num == 1)
+	{
+		return "Gun Game";
+	}
+	else if(num == 2)
+	{
+		return "Cranked";
+	}
+	else if(num == 3)
+	{
+		return "Mystery Guns";
+	}
+	else if(num == 4)
+	{
+		return "Deadlight Greenlight";
+	}
+	else if(num == 5)
+	{
+		return "Sharpshooter";
+	}
+	else if(num == 6)
+	{
+		return "Team Cranked";
+	}
+	else if(num == 7)
+	{
+		return "Zombie Snacks";
+	}
+	else if(num == 8)
+	{
+		return "Gobble Gum Game";
+	}
+	else
+	{
+		return "Invalid Gamemode";
 	}
 }
 
@@ -16415,7 +16630,7 @@ timeTillKick()
 	while(count > 0)
 	{
 		count -= 1;
-		self iprintln("Countdown:" + count + " - Warning Countdown:" + warning_count);
+		debug_text("Countdown:" + count + " - Warning Countdown:" + warning_count, self);
 		if(warning_count == count)
 		{
 			self.kickrisk = 1;
