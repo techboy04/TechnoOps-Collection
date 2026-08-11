@@ -2,6 +2,7 @@
 #include maps\_utility;
 #include maps\_effects;
 #include common_scripts\utility;
+#include maps\mp\gametypes_zm\_hud;
 #include maps\mp\gametypes_zm\_hud_util;
 #include maps\mp\gametypes_zm\_hud_message;
 #include maps\mp\zombies\_zm_utility;
@@ -25,7 +26,6 @@
 #include maps\mp\zombies\_zm_spawner;
 #include maps\mp\zombies\_zm_audio_announcer;
 #include maps\mp\zombies\_zm_blockers;
-#include maps\mp\gametypes_zm\_hud;
 #include scripts\zm\aats;
 #include scripts\zm\gobblegum;
 #include scripts\zm\ai;
@@ -103,6 +103,8 @@ main()
 	replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter, ::new_start_carpenter);
 	replacefunc(maps\mp\zombies\_zm_powerups::start_carpenter_new, ::new_start_carpenter_new);
 	replacefunc(maps\mp\zombies\_zm_chugabud::chugabud_corpse_revive_icon, ::chugabud_corpse_revive_icon);
+	
+	replacefunc(maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg, ::perk_set_max_health_if_jugg);
 	
 	replacefunc(maps\mp\zombies\_zm_laststand::faderevivemessageover, ::faderevivemessageover);
 	replacefunc(maps\mp\zombies\_zm_laststand::revive_success, ::revive_success);
@@ -209,6 +211,7 @@ init()
 	level.energy_bar_mode = false;
 	level thread toast_watcher();
 	level thread dvar_updater();
+	level thread set_health_zombie_vars();
 	level.exfilstarted = 0;
 	
 	setDvar( "g_playerCollision", "nobody" );
@@ -961,6 +964,8 @@ init_dvars()
 	create_dvar( "afk_kick_duration", 640 );
 	create_dvar( "afk_kick_warning_duration", 240 );
 	create_dvar( "debug_text", 0 );
+	create_dvar( "health_difficulty", 0 );
+	create_dvar("minigame_lobby_time", 0);
 	if(getDvarInt("afk_cooldown_duration") < 0)
 	{
 		setDvar("afk_cooldown_duration", 0);
@@ -8347,7 +8352,7 @@ command_thread()
 							player iprintln("Attempted to Teleport all Bots");
 							break;
 						case "mode":
-							player bots_switch_mode();
+//							player bots_switch_mode();
 							break;
 						case "":
 							break;
@@ -8526,7 +8531,7 @@ printColors()
 
 patchnotes_text()
 {
-	self iprintln("^5Your Version: ^23.10.7 - 8.1.2026");
+	self iprintln("^5Your Version: ^23.10.8 - 8.8.2026");
 }
 
 modslist_text()
@@ -11256,6 +11261,13 @@ actor_killed_override( einflictor, attacker, idamage, smeansofdeath, sweapon, vd
 				if (level.zombieskilled == max_kills)
 				{
 					level.zombieskilled = 0;
+					foreach(player in level.players)
+					{
+						if (player.sessionstate == "spectator")
+						{
+							player [[ level.spawnplayer ]]();
+						}
+					}
 					if(level.round_number < 20)
 					{
 						level notify ("force_next_round");
@@ -12546,6 +12558,9 @@ checkForReadyUps()
 introHUD()
 {
 	flag_wait( "initial_blackscreen_passed" );
+
+	lobby_time = getDvarInt("minigame_lobby_time");
+	
 	level.introHUD = newhudelem();
 	level.introHUD.x = 0;
 	level.introHUD.y -= 20;
@@ -12557,11 +12572,31 @@ introHUD()
 	level.introHUD.foreground = 0;
 	level.introHUD.fontscale = 1.5;
 	level.introHUD setText ("Press [{+melee}] and [{+speed_throw}] to ready up!: ^5" + level.playersready + "/" + level.players.size);
+
+	if(lobby_time >= 1)
+	{
+		level.introHUD.timer = newhudelem();
+		level.introHUD.timer.x = 0;
+		level.introHUD.timer.y = level.introHUD.y + 10;
+		level.introHUD.timer.alpha = 1;
+		level.introHUD.timer.alignx = "center";
+		level.introHUD.timer.aligny = "bottom";
+		level.introHUD.timer.horzalign = "user_center";
+		level.introHUD.timer.vertalign = "user_bottom";
+		level.introHUD.timer.foreground = 0;
+		level.introHUD.timer.fontscale = 1;
+		level.introHUD.timer setTimer(lobby_time);
+		level thread minigameTimerExpires(lobby_time);
+	}
+	
 	level thread checkForReadyUps();
 	level waittill ("end");
 	level.introHUD fadeovertime( 0.25 );
+	level.introHUD.timer fadeovertime( 0.25 );
+	level.introHUD.timer.alpha = 0;
 	level.introHUD.alpha = 0;
 	level.introHUD destroy();
+	level.introHUD.timer destroy();
 	if(getDvarInt("gamemode") == 4)
 	{
 		wait 3;
@@ -12573,24 +12608,23 @@ introHUD()
 	}
 }
 
+minigameTimerExpires(time)
+{
+	level endon ("end");
+	wait time;
+	foreach(player in level.players)
+	{
+		if(player.voted != 1)
+		{
+			level.playersready += 1;
+			player.voted = 1;
+		}
+	}
+}
+
 playerScoresHUD(index, ref)
 {	
 	y = (index * 24) + -120;
-	
-	namebg = newhudelem();
-	namebg.alignx = "left";
-	namebg.aligny = "center";
-	namebg.horzalign = "user_left";
-	namebg.vertalign = "user_center";
-	namebg.x -= 10;
-	namebg.y += y - 4;
-	namebg.fontscale = 2;
-	namebg.alpha = 0;
-	namebg.color = ( 1, 1, 0 );
-	namebg.hidewheninmenu = 1;
-	namebg.foreground = 0;
-	namebg setShader("scorebar_zom_1", 124, 32);
-	namebg thread removeHUDEndGame();
 
 	nameHUD = newhudelem();
 	nameHUD.x = 10;
@@ -12631,11 +12665,13 @@ playerScoresHUD(index, ref)
 
 		if ( (ref.weaponlevel == level.weaponlist.size - 1) && isDefined(level.players[index]))
 		{
-			namebg.alpha = 1;
+			nameHUD.color = (1, 1, 0);
+			scoreHUD.color = (1, 1, 0);
 		}
 		else
 		{
-			namebg.alpha = 0;
+			nameHUD.color = (1, 1, 1);
+			scoreHUD.color = (1, 1, 1);
 		}
 		
 		if (level.gungamestarted == 0 || level.players.size == 1)
@@ -12895,6 +12931,7 @@ player_damage_override_gungame( einflictor, eattacker, idamage, idflags, smeanso
 	{
 		flag_set( "instant_revive" );
 		self thread wait_and_revive();
+		self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg( "health_reboot", 1, 0 );
 	}
 	else
 	{
@@ -13962,7 +13999,7 @@ changemysteryweapon()
 		
 		if(isDefined(self.hasaats) && self.hasaats == 1)
 		{
-			self thread give_aat(upgradedgun);
+//			self thread give_aat(upgradedgun);
 		}
 	}
 	
@@ -17607,5 +17644,67 @@ checkVotingInput()
 		}
 		level notify ("player_vote");
 		self notify ("player_voted");
+	}
+}
+
+perk_set_max_health_if_jugg( perk, set_premaxhealth, clamp_health_to_max_health )
+{
+    max_total_health = undefined;
+
+    if ( perk == "specialty_armorvest" )
+    {
+        if ( set_premaxhealth )
+            self.premaxhealth = self.maxhealth;
+
+        max_total_health = level.zombie_vars["zombie_perk_juggernaut_health"];
+    }
+    else if ( perk == "specialty_armorvest_upgrade" )
+    {
+        if ( set_premaxhealth )
+            self.premaxhealth = self.maxhealth;
+
+        max_total_health = level.zombie_vars["zombie_perk_juggernaut_health_upgrade"];
+    }
+    else if ( perk == "jugg_upgrade" )
+    {
+        if ( set_premaxhealth )
+            self.premaxhealth = self.maxhealth;
+
+        if ( self hasperk( "specialty_armorvest" ) )
+            max_total_health = level.zombie_vars["zombie_perk_juggernaut_health"];
+        else
+            max_total_health = level.zombie_vars["zombie_base_health"];
+    }
+    else if ( perk == "health_reboot" )
+        max_total_health = level.zombie_vars["zombie_base_health"];
+
+    if ( isdefined( max_total_health ) )
+    {
+        if ( self maps\mp\zombies\_zm_pers_upgrades_functions::pers_jugg_active() )
+            max_total_health = max_total_health + level.pers_jugg_upgrade_health_bonus;
+
+        self setmaxhealth( max_total_health );
+
+        if ( isdefined( clamp_health_to_max_health ) && clamp_health_to_max_health == 1 )
+        {
+            if ( self.health > self.maxhealth )
+                self.health = self.maxhealth;
+        }
+    }
+}
+
+set_health_zombie_vars()
+{
+	if(getDvarInt("health_difficulty") == 0) //Normal
+	{
+		set_zombie_var( "zombie_base_health", 100 );
+	}
+	else if(getDvarInt("health_difficulty") == 1) //Extra Health
+	{
+		set_zombie_var( "zombie_base_health", 190 );
+	}
+	else if(getDvarInt("health_difficulty") == 2) //Hardcore
+	{
+		set_zombie_var( "zombie_base_health", 1 );	
 	}
 }

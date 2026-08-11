@@ -35,6 +35,7 @@ main()
 	replacefunc(maps\mp\zm_transit_sq::maxis_sidequest_complete, ::maxis_sidequest_complete_new);
 	replacefunc(maps\mp\zm_transit::include_equipment_for_level, ::include_equipment_for_level);
 	replaceFunc(maps\mp\zm_transit_sq::richtofen_sidequest_c, ::custom_richtofen_sidequest_c);
+	replacefunc(maps\mp\zm_transit_classic::spawn_inert_zombies, ::spawn_inert_zombies);
 	
 	if(getDvarInt("tranzit_place_dinerhatch") == 1)
 	{
@@ -952,4 +953,29 @@ enable_denizens_sidequest_b()
 {
 	level waittill ("sq_stage_3complete");
 	setDvar( "scr_screecher_ignore_player", 0 );
+}
+
+spawn_inert_zombies()
+{
+    if(getDvarInt("gamemode") != 0)
+	{
+		return;
+	}
+	
+	if ( !isdefined( self.angles ) )
+        self.angles = ( 0, 0, 0 );
+
+    wait 0.1;
+
+    if ( isdefined( level.zombie_spawners ) )
+    {
+        spawner = random( level.zombie_spawners );
+        ai = spawn_zombie( spawner );
+    }
+
+    if ( isdefined( ai ) )
+    {
+        ai forceteleport( self.origin, self.angles );
+        ai.start_inert = 1;
+    }
 }

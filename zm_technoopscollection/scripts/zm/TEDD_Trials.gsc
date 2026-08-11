@@ -14,16 +14,12 @@
 #include maps\mp\zombies\_zm_weapons;
 #include scripts\zm\main;
 
-#using_animtree("zm_transit_automaton");
-
 main()
 {
 	if(getDvarInt("enable_teddtrials") != 1)
 	{
 		return;
 	}
-	level.modlist[level.modlist.size] = "Tedd Trials";
-    level.modids[level.modids.size] = "teddtrials";
 	precachemodel("p6_anim_zm_bus_driver");
 	precacheshader("hud_icon_reward");
 	precacheshader("hud_icon_tedd");
@@ -37,7 +33,6 @@ init()
 		return;
 	}
 	level thread debug_teddlocations();
-	init_animtree();
 	init_trial_zones();
 	init_tedds();
 	level thread playerConnect();
@@ -78,8 +73,6 @@ spawn_TEDD(location, angle, zones, reward_location, area_name)
 	start = location + (0,0,18000);
 	level.teddtrial = spawn( "script_model", start );
 	level.teddtrial setmodel( "p6_anim_zm_bus_driver" );
-	level.teddtrial useanimtree( #animtree );
-	level.teddtrial setanim( %ai_zombie_bus_driver_idle );
 	level.teddtrial rotateTo((0,angle,0),.1);
 	if(isDefined(zones))
 	{
@@ -412,21 +405,16 @@ init_tedds()
 	level notify ("finished_logging_trials");
 }
 
-init_animtree()
-{
-    scriptmodelsuseanimtree( #animtree );
-}
-
 TEDD_idle()
 {
     for(;;)
 	{
 		idle_anims = [];
-		idle_anims[0] = %ai_zombie_bus_driver_idle_a;
-		idle_anims[1] = %ai_zombie_bus_driver_idle_b;
-		idle_anims[2] = %ai_zombie_bus_driver_idle_c;
-		idle_anims[3] = %ai_zombie_bus_driver_idle_d;
-		idle_anims[4] = %ai_zombie_bus_driver_idle;
+		idle_anims[0] = "ai_zombie_bus_driver_idle_a";
+		idle_anims[1] = "ai_zombie_bus_driver_idle_b";
+		idle_anims[2] = "ai_zombie_bus_driver_idle_c";
+		idle_anims[3] = "ai_zombie_bus_driver_idle_d";
+		idle_anims[4] = "ai_zombie_bus_driver_idle";
 	
 		driveranim = random( idle_anims );
 	
@@ -439,7 +427,7 @@ TEDD_idle()
 
 sndplaydriveranimsnd( the_anim )
 {
-    if ( the_anim == %ai_zombie_bus_driver_idle_twitch_a )
+    if ( the_anim == "ai_zombie_bus_driver_idle_twitch_a" )
     {
         wait 0.55;
         self playsound( "evt_zmb_robot_jerk" );
@@ -451,14 +439,14 @@ sndplaydriveranimsnd( the_anim )
         self playsound( "evt_zmb_robot_hat" );
         self playsound( "evt_zmb_robot_spin" );
     }
-    else if ( the_anim == %ai_zombie_bus_driver_idle_twitch_focused )
+    else if ( the_anim == "ai_zombie_bus_driver_idle_twitch_focused" )
     {
         wait 0.25;
         self playsound( "evt_zmb_robot_jerk" );
         wait 4.8;
         self playsound( "evt_zmb_robot_jerk" );
     }
-    else if ( the_anim == %ai_zombie_bus_driver_idle_twitch_panicked )
+    else if ( the_anim == "ai_zombie_bus_driver_idle_twitch_panicked" )
     {
         wait 0.31;
         self playsound( "evt_zmb_robot_jerk" );
@@ -471,7 +459,7 @@ sndplaydriveranimsnd( the_anim )
         wait 0.52;
         self playsound( "evt_zmb_robot_hat" );
     }
-    else if ( the_anim == %ai_zombie_bus_driver_idle_twitch_b )
+    else if ( the_anim == "ai_zombie_bus_driver_idle_twitch_b" )
     {
         wait 0.22;
         self playsound( "evt_zmb_robot_hat" );
@@ -484,21 +472,21 @@ sndplaydriveranimsnd( the_anim )
         wait 0.59;
         self playsound( "evt_zmb_robot_hat" );
     }
-    else if ( the_anim == %ai_zombie_bus_driver_idle_d )
+    else if ( the_anim == "ai_zombie_bus_driver_idle_d" )
     {
         wait 0.24;
         self playsound( "evt_zmb_robot_spin" );
         wait 1.04;
         self playsound( "evt_zmb_robot_hat" );
     }
-    else if ( the_anim == %ai_zombie_bus_driver_emp_powerdown )
+    else if ( the_anim == "ai_zombie_bus_driver_emp_powerdown" )
     {
         wait 0.1;
         self playsound( "evt_zmb_robot_jerk" );
         wait 0.9;
         self playsound( "evt_zmb_robot_jerk" );
     }
-    else if ( the_anim == %ai_zombie_bus_driver_emp_powerup )
+    else if ( the_anim == "ai_zombie_bus_driver_emp_powerup" )
     {
         wait 0.63;
         self playsound( "evt_zmb_robot_jerk" );
@@ -1563,9 +1551,6 @@ debug_teddlocations()
 			angle = spot.angle;
 			debugmodel = spawn( "script_model", start );
 			debugmodel setmodel( "p6_anim_zm_bus_driver" );
-			debugmodel useanimtree( #animtree );
-			debugmodel animmode( "normal" );
-			debugmodel setanim( %ai_zombie_bus_driver_idle );
 			debugmodel rotateTo((0,angle,0),.1);
 		}
 	}
